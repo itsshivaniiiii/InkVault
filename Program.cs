@@ -12,8 +12,32 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 if (string.IsNullOrEmpty(connectionString))
 {
     // Fall back to DATABASE_URL environment variable (used by Render)
-    connectionString = Environment.GetEnvironmentVariable("DATABASE_URL") 
-        ?? throw new InvalidOperationException("Connection string not configured");
+    connectionString = Environment.GetEnvironmentVariable("DATABASE_URL");
+}
+
+if (string.IsNullOrEmpty(connectionString))
+{
+    throw new InvalidOperationException("Connection string not configured");
+}
+
+// Handle Render's PostgreSQL URI format if needed
+if (connectionString.StartsWith("postgres://") || connectionString.StartsWith("postgresql://"))
+{
+    try 
+    {
+        var uri = new Uri(connectionString);
+        var userInfo = uri.UserInfo.Split(':');
+        var username = userInfo[0];
+        var password = userInfo.Length > 1 ? userInfo[1] : "";
+        var database = uri.AbsolutePath.TrimStart('/');
+        
+        connectionString = $"Server={uri.Host};Port={uri.Port};Database={database};User Id={username};Password={password};SSL Mode=Require;Trust Server Certificate=true;";
+    }
+    catch (Exception ex)
+    {
+        // Log warning but continue with original string if parsing fails
+        Console.WriteLine($"Warning: Failed to parse connection URI: {ex.Message}");
+    }
 }
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
