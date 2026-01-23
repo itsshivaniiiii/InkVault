@@ -245,6 +245,12 @@ FodyWeavers.xsd
 # ===========================================
 # Project-Specific Ignores
 # ===========================================
+# Database setup scripts (contain credentials)
+setup_aiven_db.py
+verify_aiven_db.py
+InkVault_Aiven_Setup.sql
+*.sql
+
 # InkVault specific documentation (optional - remove if you want to track)
 # JOURNAL_DELETE_FEATURE.md
 # FINAL_COMPLETION_SUMMARY.md
