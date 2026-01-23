@@ -20,23 +20,50 @@ if (string.IsNullOrEmpty(connectionString))
     throw new InvalidOperationException("Connection string not configured");
 }
 
-// Handle Render's PostgreSQL URI format if needed
-if (connectionString.StartsWith("postgres://") || connectionString.StartsWith("postgresql://"))
+try 
 {
-    try 
+    var builder2 = new Npgsql.NpgsqlConnectionStringBuilder();
+
+    if (connectionString.StartsWith("postgres://") || connectionString.StartsWith("postgresql://"))
     {
+        // Parse Render's URI format
         var uri = new Uri(connectionString);
         var userInfo = uri.UserInfo.Split(':');
-        var username = userInfo[0];
-        var password = userInfo.Length > 1 ? userInfo[1] : "";
-        var database = uri.AbsolutePath.TrimStart('/');
         
-        connectionString = $"Server={uri.Host};Port={uri.Port};Database={database};User Id={username};Password={password};SSL Mode=Require;Trust Server Certificate=true;";
+        builder2.Host = uri.Host;
+        builder2.Port = uri.Port;
+        builder2.Database = uri.AbsolutePath.TrimStart('/');
+        builder2.Username = userInfo[0];
+        builder2.Password = userInfo.Length > 1 ? userInfo[1] : "";
     }
-    catch (Exception ex)
+    else
     {
-        // Log warning but continue with original string if parsing fails
-        Console.WriteLine($"Warning: Failed to parse connection URI: {ex.Message}");
+        // Parse standard connection string
+        builder2.ConnectionString = connectionString;
+    }
+
+    // Force required SSL settings
+    builder2.SslMode = Npgsql.SslMode.Require;
+    builder2.TrustServerCertificate = true; // For Aiven/Render reliability
+    
+    // Update connection string
+    connectionString = builder2.ToString();
+    
+    Console.WriteLine($"Using connection (masked): Host={builder2.Host}; Database={builder2.Database}; Username={builder2.Username}; SslMode={builder2.SslMode}");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Error parsing connection string: {ex.Message}");
+    // Fallback: simple string replacement to fix common SslMode issues if parsing fails
+    if (connectionString.Contains("sslmode=Required", StringComparison.OrdinalIgnoreCase))
+    {
+        connectionString = connectionString.Replace("sslmode=Required", "SSL Mode=Require", StringComparison.OrdinalIgnoreCase);
+        connectionString = connectionString.Replace("sslmode=required", "SSL Mode=Require", StringComparison.OrdinalIgnoreCase);
+    }
+    // Also fix lowercase 'require' just in case
+    if (connectionString.Contains("sslmode=require", StringComparison.OrdinalIgnoreCase)) 
+    {
+        connectionString = connectionString.Replace("sslmode=require", "SSL Mode=Require", StringComparison.OrdinalIgnoreCase);
     }
 }
 

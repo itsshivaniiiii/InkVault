@@ -31,12 +31,40 @@ namespace InkVault
                 throw new InvalidOperationException("Connection string 'DefaultConnection' not found and DATABASE_URL not set.");
             }
 
-            // Convert PostgreSQL URI to connection string format if needed
-            if (connectionString.StartsWith("postgresql://"))
+            // Parse and rebuild connection string explicitly
+            try 
             {
-                var uri = new Uri(connectionString);
-                var userInfo = uri.UserInfo.Split(':');
-                connectionString = $"Server={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};User Id={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true;";
+                var builder = new NpgsqlConnectionStringBuilder();
+
+                if (connectionString.StartsWith("postgres://") || connectionString.StartsWith("postgresql://"))
+                {
+                    var uri = new Uri(connectionString);
+                    var userInfo = uri.UserInfo.Split(':');
+                    
+                    builder.Host = uri.Host;
+                    builder.Port = uri.Port;
+                    builder.Database = uri.AbsolutePath.TrimStart('/');
+                    builder.Username = userInfo[0];
+                    builder.Password = userInfo.Length > 1 ? userInfo[1] : "";
+                }
+                else
+                {
+                    builder.ConnectionString = connectionString;
+                }
+
+                // Force required SSL settings
+                builder.SslMode = SslMode.Require;
+                builder.TrustServerCertificate = true;
+                
+                connectionString = builder.ToString();
+            }
+            catch
+            {
+                // Fallback string replacement if parsing fails
+                if (connectionString.Contains("sslmode=require", StringComparison.OrdinalIgnoreCase))
+                {
+                     connectionString = connectionString.Replace("sslmode=require", "SSL Mode=Require", StringComparison.OrdinalIgnoreCase);
+                }
             }
 
             optionsBuilder.UseNpgsql(connectionString);
