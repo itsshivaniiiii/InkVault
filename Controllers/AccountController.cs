@@ -166,6 +166,7 @@ namespace InkVault.Controllers
                     }
                     catch (Exception ex)
                     {
+                        Console.WriteLine($"Error sending OTP: {ex}");
                         ModelState.AddModelError(string.Empty, "Error sending OTP. Please try again.");
                         return View(model);
                     }

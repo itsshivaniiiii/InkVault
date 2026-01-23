@@ -24,9 +24,20 @@ namespace InkVault.Services
             {
                 var smtpSettings = _configuration.GetSection("SmtpSettings");
                 var smtpServer = smtpSettings["Server"];
+
+                if (string.IsNullOrEmpty(smtpServer))
+                {
+                    throw new InvalidOperationException("SMTP configuration is missing. Please ensure SmtpSettings are configured in appsettings.json or Environment Variables.");
+                }
+
                 var smtpPort = int.Parse(smtpSettings["Port"] ?? "587");
                 var senderEmail = smtpSettings["SenderEmail"];
                 var senderPassword = smtpSettings["SenderPassword"];
+
+                if (string.IsNullOrEmpty(senderEmail) || string.IsNullOrEmpty(senderPassword))
+                {
+                    throw new InvalidOperationException("SMTP credentials are missing.");
+                }
 
                 using (var client = new SmtpClient(smtpServer, smtpPort))
                 {
@@ -66,9 +77,20 @@ namespace InkVault.Services
             {
                 var smtpSettings = _configuration.GetSection("SmtpSettings");
                 var smtpServer = smtpSettings["Server"];
+
+                if (string.IsNullOrEmpty(smtpServer))
+                {
+                    throw new InvalidOperationException("SMTP configuration is missing. Please ensure SmtpSettings are configured in appsettings.json or Environment Variables.");
+                }
+
                 var smtpPort = int.Parse(smtpSettings["Port"] ?? "587");
                 var senderEmail = smtpSettings["SenderEmail"];
                 var senderPassword = smtpSettings["SenderPassword"];
+
+                if (string.IsNullOrEmpty(senderEmail) || string.IsNullOrEmpty(senderPassword))
+                {
+                    throw new InvalidOperationException("SMTP credentials are missing.");
+                }
 
                 using (var client = new SmtpClient(smtpServer, smtpPort))
                 {
