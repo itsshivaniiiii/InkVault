@@ -390,9 +390,9 @@
             
             @if (!string.IsNullOrEmpty(Model?.ProfilePictureUrl))
             {
-                <form method="post" action="@Url.Action("RemoveProfilePicture", "Profile")" style="display: inline;" onsubmit="return confirm('Remove profile picture?');">
+                <form method="post" action="@Url.Action("RemoveProfilePicture", "Profile")" style="display: inline;" id="removePicForm">
                     @Html.AntiForgeryToken()
-                    <button type="submit" class="remove-picture-btn" title="Remove picture">
+                    <button type="button" class="remove-picture-btn" title="Remove picture" onclick="showConfirm('Remove your profile picture?', function() { document.getElementById('removePicForm').submit(); }, { title: 'Remove Picture', confirmText: 'Remove', danger: true })">
                         <i class="bi bi-x"></i>
                     </button>
                 </form>
@@ -497,9 +497,9 @@
 
         <p style="color: var(--text-secondary); margin-bottom: 20px;">These actions cannot be undone</p>
 
-        <form method="post" action="@Url.Action("DeleteAccount", "Profile")" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete your account? This action cannot be undone.');">
+        <form method="post" action="@Url.Action("DeleteAccount", "Profile")" style="display: inline;" id="deleteAccountForm">
             @Html.AntiForgeryToken()
-            <button type="submit" class="btn-danger">
+            <button type="button" class="btn-danger" onclick="showConfirm('Are you sure you want to delete your account? This action cannot be undone.', function() { document.getElementById('deleteAccountForm').submit(); }, { title: 'Delete Account', confirmText: 'Delete Permanently', danger: true })">
                 <i class="bi bi-trash"></i> Delete Account
             </button>
         </form>
@@ -569,7 +569,7 @@ if (bioField) {
                 if (response.ok) {
                     location.reload();
                 } else {
-                    alert('Error uploading profile picture');
+                    showToast('Error uploading profile picture', 'error');
                 }
             })
             .catch(err => console.error('Error:', err));

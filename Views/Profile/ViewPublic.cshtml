@@ -284,9 +284,9 @@
                 else
                 {
                     <form method="post" asp-controller="Friends" asp-action="SendRequest" style="display: inline;"
-                          onsubmit="return confirm('Send friend request to @Model?.FirstName @Model?.LastName?');">
+                          id="sendRequestForm">
                         <input type="hidden" name="receiverId" value="@Model?.UserId" />
-                        <button type="submit" class="action-button">
+                        <button type="button" class="action-button" onclick="showConfirm('Send friend request to @Model?.FirstName @Model?.LastName?', function() { document.getElementById('sendRequestForm').submit(); }, { title: 'Add Friend', confirmText: 'Send Request' })">
                             <i class="bi bi-person-plus"></i> Add Friend
                         </button>
                     </form>

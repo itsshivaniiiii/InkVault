@@ -968,33 +968,31 @@
     }
 
     function deleteComment(commentId) {
-        if (!confirm('Are you sure you want to delete this comment?')) {
-            return;
-        }
+        showConfirm('Are you sure you want to delete this comment?', function() {
+            fetch(`/api/interaction/comment/${commentId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                const commentElement = document.getElementById(`comment-${commentId}`);
+                if (commentElement) {
+                    commentElement.remove();
+                }
 
-        fetch(`/api/interaction/comment/${commentId}`, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            const commentElement = document.getElementById(`comment-${commentId}`);
-            if (commentElement) {
-                commentElement.remove();
-            }
+                const commentCount = document.getElementById('commentCount');
+                commentCount.textContent = Math.max(0, parseInt(commentCount.textContent) - 1);
 
-            const commentCount = document.getElementById('commentCount');
-            commentCount.textContent = Math.max(0, parseInt(commentCount.textContent) - 1);
-
-            showToast('Comment deleted successfully', 'success');
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showToast('Failed to delete comment', 'error');
-        });
+                showToast('Comment deleted successfully', 'success');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Failed to delete comment', 'error');
+            });
+        }, { title: 'Delete Comment', confirmText: 'Delete', danger: true });
     }
 
     function showToast(message, type = 'info') {

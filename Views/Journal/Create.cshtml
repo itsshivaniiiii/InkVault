@@ -1290,7 +1290,7 @@
         // Validate that there's actual content
         if (text.length === 0) {
             e.preventDefault();
-            alert('Please write some content for your journal');
+            showToast('Please write some content for your journal', 'warning');
             editor.focus();
             return false;
         }
@@ -1301,7 +1301,7 @@
             e.preventDefault();
             showTagsError();
             tagsInput.focus();
-            alert('Please add at least one tag before publishing your journal');
+            showToast('Please add at least one tag before publishing your journal', 'warning');
             return false;
         }
 
@@ -1466,7 +1466,7 @@ function openEnhanceModal() {
     const content = document.getElementById('Content').innerText.trim();
     
     if (!content || content.length < 10) {
-        alert('Please write at least 10 characters before using AI enhancement.');
+        showToast('Please write at least 10 characters before using AI enhancement.', 'warning');
         return;
     }
 

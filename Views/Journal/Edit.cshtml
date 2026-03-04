@@ -749,11 +749,11 @@ document.querySelectorAll('.toolbar-btn').forEach(btn => {
         // Validate that there's actual content
         if (text.length === 0) {
             e.preventDefault();
-            alert('Please write some content for your journal');
+            showToast('Please write some content for your journal', 'warning');
             editor.focus();
             return false;
         }
-        
+
         // Content is valid and synced, form will submit with populated hidden input
         return true;
     }, true); // Use capture phase to ensure this runs BEFORE validation
@@ -993,7 +993,7 @@ document.querySelectorAll('.toolbar-btn').forEach(btn => {
         // Validate that there's actual content
         if (text.length === 0) {
             e.preventDefault();
-            alert('Please write some content for your journal');
+            showToast('Please write some content for your journal', 'warning');
             editor.focus();
             return false;
         }
@@ -1004,7 +1004,7 @@ document.querySelectorAll('.toolbar-btn').forEach(btn => {
             e.preventDefault();
             showTagsError();
             tagsInput.focus();
-            alert('Please add at least one tag before publishing your journal');
+            showToast('Please add at least one tag before publishing your journal', 'warning');
             return false;
         }
 
