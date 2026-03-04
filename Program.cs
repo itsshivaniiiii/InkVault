@@ -9,6 +9,10 @@ using InkVault.Filters;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Allow DateTime with Kind=Unspecified to be written as UTC to PostgreSQL
+// (HTML date inputs produce Unspecified kind; Npgsql 6+ rejects them by default)
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 // Get connection string - try DATABASE_URL (Render/Aiven) first, then config
 var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL");
 
@@ -94,7 +98,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 
 // Services
-builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddHttpClient<IEmailService, EmailService>();
 builder.Services.AddScoped<IOTPService, OTPService>();
 builder.Services.AddScoped<IBirthdayService, BirthdayService>();
 builder.Services.AddScoped<NotificationService>();

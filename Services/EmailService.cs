@@ -1,6 +1,5 @@
-using MimeKit;
-using MailKit.Net.Smtp;
-using MailKit.Security;
+using System.Text;
+using System.Text.Json;
 
 namespace InkVault.Services
 {
@@ -14,11 +13,13 @@ namespace InkVault.Services
     {
         private readonly IConfiguration _configuration;
         private readonly ILogger<EmailService> _logger;
+        private readonly HttpClient _httpClient;
 
-        public EmailService(IConfiguration configuration, ILogger<EmailService> logger)
+        public EmailService(IConfiguration configuration, ILogger<EmailService> logger, HttpClient httpClient)
         {
             _configuration = configuration;
             _logger = logger;
+            _httpClient = httpClient;
         }
 
         public async Task SendOTPAsync(string email, string otp)
@@ -116,96 +117,108 @@ namespace InkVault.Services
         {
             try
             {
-                // Try multiple configuration sources
-                var smtpServer = _configuration["SmtpSettings:Server"] 
-                    ?? Environment.GetEnvironmentVariable("SmtpSettings__Server")
-                    ?? Environment.GetEnvironmentVariable("SMTP_SERVER");
-                    
-                var senderEmail = _configuration["SmtpSettings:SenderEmail"] 
-                    ?? Environment.GetEnvironmentVariable("SmtpSettings__SenderEmail")
-                    ?? Environment.GetEnvironmentVariable("SMTP_EMAIL");
-                    
-                var senderPassword = _configuration["SmtpSettings:SenderPassword"] 
-                    ?? Environment.GetEnvironmentVariable("SmtpSettings__SenderPassword")
-                    ?? Environment.GetEnvironmentVariable("SMTP_PASSWORD");
-                    
-                var smtpPortStr = _configuration["SmtpSettings:Port"] 
-                    ?? Environment.GetEnvironmentVariable("SmtpSettings__Port")
-                    ?? Environment.GetEnvironmentVariable("SMTP_PORT")
-                    ?? "587";
+                // Try SendGrid API first (works on Render free tier — uses HTTPS, not SMTP)
+                var sendGridApiKey = _configuration["SendGrid:ApiKey"]
+                    ?? Environment.GetEnvironmentVariable("SendGrid__ApiKey")
+                    ?? Environment.GetEnvironmentVariable("SENDGRID_API_KEY");
 
-                Console.WriteLine($"[EMAIL] ========== EMAIL SERVICE DEBUG ==========");
-                Console.WriteLine($"[EMAIL] Recipient: {email}");
-                Console.WriteLine($"[EMAIL] Subject: {subject}");
-                Console.WriteLine($"[EMAIL] SMTP Server: {(string.IsNullOrEmpty(smtpServer) ? "[NOT SET]" : $"[OK] {smtpServer}")}");
-                Console.WriteLine($"[EMAIL] Sender Email: {(string.IsNullOrEmpty(senderEmail) ? "[NOT SET]" : $"[OK] {senderEmail}")}");
-                Console.WriteLine($"[EMAIL] Sender Password: {(string.IsNullOrEmpty(senderPassword) ? "[NOT SET]" : "[OK] SET")}");
-                Console.WriteLine($"[EMAIL] SMTP Port: {smtpPortStr}");
-                Console.WriteLine($"[EMAIL] ==========================================");
+                var senderEmail = _configuration["SendGrid:SenderEmail"]
+                    ?? _configuration["SmtpSettings:SenderEmail"]
+                    ?? Environment.GetEnvironmentVariable("SendGrid__SenderEmail")
+                    ?? Environment.GetEnvironmentVariable("SmtpSettings__SenderEmail");
 
-                _logger.LogInformation("SMTP Config Check - Server: {Server}, Email: {Email}, Password: {HasPassword}, Port: {Port}",
-                    string.IsNullOrEmpty(smtpServer) ? "NOT SET" : smtpServer,
-                    string.IsNullOrEmpty(senderEmail) ? "NOT SET" : senderEmail,
-                    string.IsNullOrEmpty(senderPassword) ? "NOT SET" : "***SET***",
-                    smtpPortStr);
+                var senderName = _configuration["SendGrid:SenderName"]
+                    ?? Environment.GetEnvironmentVariable("SendGrid__SenderName")
+                    ?? "InkVault";
 
-                // Skip email sending if SMTP is not configured
-                if (string.IsNullOrEmpty(smtpServer) || string.IsNullOrEmpty(senderEmail) || string.IsNullOrEmpty(senderPassword))
+                if (!string.IsNullOrEmpty(sendGridApiKey) && !string.IsNullOrEmpty(senderEmail))
                 {
-                    Console.WriteLine("[EMAIL] SMTP CONFIGURATION INCOMPLETE!");
-                    Console.WriteLine("[EMAIL] Please set these environment variables:");
-                    Console.WriteLine("[EMAIL]   - SMTP_SERVER or SmtpSettings__Server");
-                    Console.WriteLine("[EMAIL]   - SMTP_EMAIL or SmtpSettings__SenderEmail");
-                    Console.WriteLine("[EMAIL]   - SMTP_PASSWORD or SmtpSettings__SenderPassword");
-                    Console.WriteLine("[EMAIL]   - SMTP_PORT or SmtpSettings__Port (optional, default: 587)");
-                    _logger.LogWarning("SMTP configuration is incomplete. Email will not be sent. Please set environment variables: SmtpSettings__Server, SmtpSettings__SenderEmail, SmtpSettings__SenderPassword");
+                    await SendViaSendGridAsync(email, subject, htmlBody, sendGridApiKey, senderEmail, senderName);
                     return;
                 }
 
-                if (!int.TryParse(smtpPortStr, out var smtpPort))
-                {
-                    smtpPort = 587;
-                }
-
-                _logger.LogInformation("Connecting to SMTP server {SmtpServer}:{SmtpPort}", smtpServer, smtpPort);
-                Console.WriteLine($"[EMAIL] Connecting to {smtpServer}:{smtpPort}...");
-
-                var message = new MimeMessage();
-                message.From.Add(new MailboxAddress("InkVault", senderEmail));
-                message.To.Add(new MailboxAddress("", email));
-                message.Subject = subject;
-
-                var bodyBuilder = new BodyBuilder { HtmlBody = htmlBody };
-                message.Body = bodyBuilder.ToMessageBody();
-
-                using (var client = new SmtpClient())
-                {
-                    // Set a timeout of 30 seconds for SMTP operations
-                    client.Timeout = 30000;
-
-                    // Connect with timeout handling
-                    await client.ConnectAsync(smtpServer, smtpPort, SecureSocketOptions.StartTls);
-                    
-                    _logger.LogInformation("Connected to SMTP server, authenticating...");
-                    Console.WriteLine($"[EMAIL] [OK] Connected! Authenticating...");
-                    await client.AuthenticateAsync(senderEmail, senderPassword);
-                    
-                    _logger.LogInformation("Sending email to {Email}", email);
-                    Console.WriteLine($"[EMAIL] [OK] Authenticated! Sending email to {email}...");
-                    await client.SendAsync(message);
-                    
-                    await client.DisconnectAsync(true);
-                    _logger.LogInformation("Email sent successfully to {Email}", email);
-                    Console.WriteLine($"[EMAIL] [OK] EMAIL SENT SUCCESSFULLY to {email}!");
-                }
+                // Fallback to SMTP for local development
+                _logger.LogInformation("SendGrid not configured, attempting SMTP fallback...");
+                await SendViaSmtpAsync(email, subject, htmlBody);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[EMAIL] ERROR: {ex.Message}");
-                Console.WriteLine($"[EMAIL] Stack: {ex.StackTrace}");
-                _logger.LogWarning(ex, "Failed to send email to {Email}. This is non-critical and won't affect user experience.", email);
-                // Email is non-blocking - do not throw
+                _logger.LogWarning(ex, "Failed to send email to {Email}. This is non-critical.", email);
             }
+        }
+
+        private async Task SendViaSendGridAsync(string toEmail, string subject, string htmlBody,
+            string apiKey, string fromEmail, string fromName)
+        {
+            Console.WriteLine($"[EMAIL] Sending via SendGrid API to {toEmail}...");
+
+            var payload = new
+            {
+                personalizations = new[] { new { to = new[] { new { email = toEmail } } } },
+                from = new { email = fromEmail, name = fromName },
+                subject,
+                content = new[] { new { type = "text/html", value = htmlBody } }
+            };
+
+            var request = new HttpRequestMessage(HttpMethod.Post, "https://api.sendgrid.com/v3/mail/send")
+            {
+                Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json")
+            };
+            request.Headers.Add("Authorization", $"Bearer {apiKey}");
+
+            var response = await _httpClient.SendAsync(request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                Console.WriteLine($"[EMAIL] SendGrid: sent successfully to {toEmail}");
+                _logger.LogInformation("Email sent via SendGrid to {Email}", toEmail);
+            }
+            else
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"[EMAIL] SendGrid error {response.StatusCode}: {errorBody}");
+                throw new Exception($"SendGrid API error: {response.StatusCode} - {errorBody}");
+            }
+        }
+
+        private async Task SendViaSmtpAsync(string email, string subject, string htmlBody)
+        {
+            var smtpServer = _configuration["SmtpSettings:Server"]
+                ?? Environment.GetEnvironmentVariable("SmtpSettings__Server");
+            var senderEmail = _configuration["SmtpSettings:SenderEmail"]
+                ?? Environment.GetEnvironmentVariable("SmtpSettings__SenderEmail");
+            var senderPassword = _configuration["SmtpSettings:SenderPassword"]
+                ?? Environment.GetEnvironmentVariable("SmtpSettings__SenderPassword");
+            var smtpPortStr = _configuration["SmtpSettings:Port"]
+                ?? Environment.GetEnvironmentVariable("SmtpSettings__Port")
+                ?? "587";
+
+            if (string.IsNullOrEmpty(smtpServer) || string.IsNullOrEmpty(senderEmail) || string.IsNullOrEmpty(senderPassword))
+            {
+                _logger.LogWarning("Neither SendGrid nor SMTP is configured. Email not sent.");
+                return;
+            }
+
+            if (!int.TryParse(smtpPortStr, out var smtpPort)) smtpPort = 587;
+
+            Console.WriteLine($"[EMAIL] Sending via SMTP {smtpServer}:{smtpPort} to {email}...");
+
+            var message = new MimeKit.MimeMessage();
+            message.From.Add(new MimeKit.MailboxAddress("InkVault", senderEmail));
+            message.To.Add(new MimeKit.MailboxAddress("", email));
+            message.Subject = subject;
+            message.Body = new MimeKit.BodyBuilder { HtmlBody = htmlBody }.ToMessageBody();
+
+            using var client = new MailKit.Net.Smtp.SmtpClient();
+            client.Timeout = 30000;
+            await client.ConnectAsync(smtpServer, smtpPort, MailKit.Security.SecureSocketOptions.StartTls);
+            await client.AuthenticateAsync(senderEmail, senderPassword);
+            await client.SendAsync(message);
+            await client.DisconnectAsync(true);
+
+            Console.WriteLine($"[EMAIL] SMTP: sent successfully to {email}");
+            _logger.LogInformation("Email sent via SMTP to {Email}", email);
         }
     }
 }

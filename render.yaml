@@ -25,7 +25,7 @@ services:
       - key: DATABASE_URL
         sync: false
 
-      # --- SMTP Email (set in Render Dashboard) ---
+      # --- SMTP Email (local dev fallback) ---
       - key: SmtpSettings__Server
         sync: false
       - key: SmtpSettings__Port
@@ -33,6 +33,12 @@ services:
       - key: SmtpSettings__SenderEmail
         sync: false
       - key: SmtpSettings__SenderPassword
+        sync: false
+
+      # --- SendGrid Email API (production on Render) ---
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: SendGrid__SenderEmail
         sync: false
 
       # --- Gemini AI (set in Render Dashboard) ---
