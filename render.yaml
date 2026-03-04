@@ -11,7 +11,7 @@ services:
     region: oregon
     plan: free
     branch: main
-    healthCheckPath: /
+    healthCheckPath: /health
     autoDeploy: true
 
     envVars:

@@ -127,19 +127,21 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 
 var app = builder.Build();
 
-// Auto-apply pending migrations on startup (essential for Render deployment)
+// Auto-apply pending migrations on startup
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     try
     {
         Console.WriteLine("[STARTUP] Applying pending database migrations...");
+        db.Database.SetCommandTimeout(TimeSpan.FromSeconds(120));
         db.Database.Migrate();
         Console.WriteLine("[STARTUP] Database migrations applied successfully.");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"[STARTUP] Migration error: {ex.Message}");
+        Console.WriteLine($"[STARTUP] Migration warning (non-fatal): {ex.Message}");
+        // Don't crash the app — migrations may already be applied
     }
 }
 
@@ -171,6 +173,9 @@ app.UseSession();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Lightweight health endpoint for Render (no auth, no DB)
+app.MapGet("/health", () => Results.Ok("healthy"));
 
 app.MapControllerRoute(
     name: "default",
