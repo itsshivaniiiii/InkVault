@@ -670,6 +670,7 @@ function sendFriendRequest(btn, receiverId, userName) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
         },
         body: 'receiverId=' + encodeURIComponent(receiverId) +
               (csrfToken ? '&__RequestVerificationToken=' + encodeURIComponent(csrfToken) : '')
@@ -719,6 +720,7 @@ function withdrawRequest(btn, friendRequestId, userName) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
         },
         body: 'friendRequestId=' + encodeURIComponent(friendRequestId) + 
               (csrfToken ? '&__RequestVerificationToken=' + encodeURIComponent(csrfToken) : '')
@@ -760,6 +762,7 @@ function acceptRequest(btn, friendRequestId, userName) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
         },
         body: 'friendRequestId=' + encodeURIComponent(friendRequestId) + 
               (csrfToken ? '&__RequestVerificationToken=' + encodeURIComponent(csrfToken) : '')
@@ -801,6 +804,7 @@ function declineRequest(btn, friendRequestId, userName) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
         },
         body: 'friendRequestId=' + encodeURIComponent(friendRequestId) + 
               (csrfToken ? '&__RequestVerificationToken=' + encodeURIComponent(csrfToken) : '')
@@ -841,8 +845,9 @@ function removeFriend(btn, friendId, userName) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
             },
-            body: 'friendId=' + encodeURIComponent(friendId) + 
+            body: 'friendId=' + encodeURIComponent(friendId) +
                   (csrfToken ? '&__RequestVerificationToken=' + encodeURIComponent(csrfToken) : '')
         })
         .then(response => {

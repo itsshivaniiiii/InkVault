@@ -283,13 +283,10 @@
                 }
                 else
                 {
-                    <form method="post" asp-controller="Friends" asp-action="SendRequest" style="display: inline;"
-                          id="sendRequestForm">
-                        <input type="hidden" name="receiverId" value="@Model?.UserId" />
-                        <button type="button" class="action-button" onclick="showConfirm('Send friend request to @Model?.FirstName @Model?.LastName?', function() { document.getElementById('sendRequestForm').submit(); }, { title: 'Add Friend', confirmText: 'Send Request' })">
-                            <i class="bi bi-person-plus"></i> Add Friend
-                        </button>
-                    </form>
+                    @Html.AntiForgeryToken()
+                    <button type="button" class="action-button" id="addFriendBtn" onclick="sendFriendRequestFromProfile('@Model?.UserId', '@Model?.FirstName @Model?.LastName')">
+                        <i class="bi bi-person-plus"></i> Add Friend
+                    </button>
                 }
             </div>
         }
@@ -349,7 +346,42 @@
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
     <script>
-        // Inject UserManager for friend checking (requires middleware)
-        var userManager = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(new { }));
+        function sendFriendRequestFromProfile(receiverId, userName) {
+            showConfirm('Send friend request to ' + userName + '?', function() {
+                var btn = document.getElementById('addFriendBtn');
+                btn.disabled = true;
+                btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Sending...';
+
+                var csrfToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+
+                fetch('/Friends/SendRequest', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: 'receiverId=' + encodeURIComponent(receiverId) +
+                          '&__RequestVerificationToken=' + encodeURIComponent(csrfToken)
+                })
+                .then(function(response) {
+                    if (!response.ok) {
+                        return response.text().then(function(text) { throw new Error(text || 'Failed to send request'); });
+                    }
+                    return response.json();
+                })
+                .then(function() {
+                    showToast('Friend request sent to ' + userName + '!', 'success');
+                    btn.innerHTML = '<i class="bi bi-clock"></i> Request Sent';
+                    btn.className = 'action-button';
+                    btn.style.opacity = '0.7';
+                    btn.onclick = null;
+                })
+                .catch(function(error) {
+                    showToast(error.message || 'Error sending friend request', 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-person-plus"></i> Add Friend';
+                });
+            }, { title: 'Add Friend', confirmText: 'Send Request' });
+        }
     </script>
 }

@@ -227,7 +227,15 @@ namespace InkVault.Controllers
             // Send email notification to receiver
             await _notificationService.SendFriendRequestReceivedEmailAsync(friendRequest);
 
-            return Ok("Friend request sent");
+            // If AJAX request, return JSON; otherwise redirect back
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest" ||
+                Request.Headers["Accept"].ToString().Contains("application/json"))
+            {
+                return Ok(new { success = true, message = "Friend request sent" });
+            }
+
+            TempData["Success"] = "Friend request sent!";
+            return Redirect(Request.Headers["Referer"].ToString() ?? "/Friends");
         }
 
 
@@ -346,7 +354,14 @@ namespace InkVault.Controllers
 
             await _context.SaveChangesAsync();
 
-            return Ok("Friend removed");
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest" ||
+                Request.Headers["Accept"].ToString().Contains("application/json"))
+            {
+                return Ok(new { success = true, message = "Friend removed" });
+            }
+
+            TempData["Success"] = "Friend removed.";
+            return Redirect(Request.Headers["Referer"].ToString() ?? "/Friends");
         }
 
         [HttpPost]
