@@ -482,7 +482,7 @@
                             </a>
                         }
                     </div>
-                    <div class="journal-author-date">@Model.CreatedAt.ToString("MMMM dd, yyyy")</div>
+                    <div class="journal-author-date"><time datetime="@Model.CreatedAt.ToString("o")"></time></div>
                 </div>
             </div>
         </div>
@@ -653,7 +653,7 @@
                             <div class="comment-header">
                                 <div class="comment-author">@comment.User?.FirstName @comment.User?.LastName</div>
                                 <div class="comment-meta">
-                                    <span class="comment-time">@comment.CreatedAt.ToString("MMM dd, yyyy")</span>
+                                    <span class="comment-time"><time datetime="@comment.CreatedAt.ToString("o")"></time></span>
                                     @if (User.Identity?.Name == comment.User?.UserName)
                                     {
                                         <button class="comment-delete" onclick="deleteComment(@comment.Id)">Delete</button>
@@ -939,7 +939,7 @@
                 <div class="comment-header">
                     <div class="comment-author">${data.authorName}</div>
                     <div class="comment-meta">
-                        <span class="comment-time">${data.createdAt}</span>
+                        <span class="comment-time"><time datetime="${data.createdAt}"></time></span>
                         <button class="comment-delete" onclick="deleteComment(${data.id})">Delete</button>
                     </div>
                 </div>
@@ -947,7 +947,12 @@
             `;
 
             commentsList.insertBefore(newComment, commentsList.firstChild);
-            
+            // Convert the new comment's <time> to local
+            newComment.querySelectorAll('time[datetime]').forEach(function (el) {
+                var utc = new Date(el.getAttribute('datetime'));
+                if (!isNaN(utc)) el.textContent = utc.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+            });
+
             document.getElementById('commentText').value = '';
             document.getElementById('commentInputArea').style.display = 'none';
             

@@ -465,8 +465,8 @@
                     </div>
 
                     <div class="saved-dates" style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 15px;">
-                        <span><i class="bi bi-calendar-event"></i> Written: @savedJournal.CreatedAt.ToString("MMM dd, yyyy")</span>
-                        <span><i class="bi bi-bookmark-heart"></i> Saved: @savedJournal.SavedAt.ToString("MMM dd, yyyy")</span>
+                        <span><i class="bi bi-calendar-event"></i> Written: <time datetime="@savedJournal.CreatedAt.ToString("o")"></time></span>
+                        <span><i class="bi bi-bookmark-heart"></i> Saved: <time datetime="@savedJournal.SavedAt.ToString("o")"></time></span>
                     </div>
 
                     <div class="tile-actions" style="display: flex; gap: 10px;">

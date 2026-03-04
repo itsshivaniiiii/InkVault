@@ -461,7 +461,7 @@
                             }
                         </div>
                         <div class="user-name">@friend.FirstName @friend.LastName</div>
-                        <div class="user-email">Friends since @friend.CreatedAt.ToString("MMM dd, yyyy")</div>
+                        <div class="user-email">Friends since <time datetime="@friend.CreatedAt.ToString("o")"></time></div>
                         <div class="user-actions">
                             <button class="btn-action btn-remove" onclick="event.stopPropagation(); removeFriend(this, @friend.FriendId, '@friend.FirstName @friend.LastName')"><i class="bi bi-x-circle"></i> Remove Friend</button>
                         </div>
@@ -518,7 +518,7 @@
                                 </div>
                                 <div style="flex: 1;">
                                     <div class="user-name">@request.SenderFirstName @request.SenderLastName</div>
-                                    <div class="user-email" style="font-size: 0.85rem;">Sent @request.CreatedAt.ToString("MMM dd, yyyy")</div>
+                                    <div class="user-email" style="font-size: 0.85rem;">Sent <time datetime="@request.CreatedAt.ToString("o")"></time></div>
                                 </div>
                                 <div style="display: flex; gap: 10px;">
                                     <button class="btn-action btn-accept" onclick="acceptRequest(this, @request.FriendRequestId, '@request.SenderFirstName @request.SenderLastName')" style="white-space: nowrap;">
@@ -579,7 +579,7 @@
                                 </div>
                                 <div style="flex: 1;">
                                     <div class="user-name">@request.ReceiverFirstName @request.ReceiverLastName</div>
-                                    <div class="user-email" style="font-size: 0.85rem;">Sent @request.CreatedAt.ToString("MMM dd, yyyy")</div>
+                                    <div class="user-email" style="font-size: 0.85rem;">Sent <time datetime="@request.CreatedAt.ToString("o")"></time></div>
                                 </div>
                                 <button class="btn-action btn-withdraw" onclick="withdrawRequest(this, @request.FriendRequestId, '@request.ReceiverFirstName @request.ReceiverLastName')" style="white-space: nowrap;">
                                     <i class="bi bi-arrow-counterclockwise"></i> Withdraw

@@ -931,5 +931,21 @@
     }
 
     @await RenderSectionAsync("Scripts", required: false)
+
+    <script>
+        // Convert all <time> elements from UTC to user's local timezone
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('time[datetime]').forEach(function (el) {
+                var utc = new Date(el.getAttribute('datetime'));
+                if (isNaN(utc)) return;
+                var fmt = el.getAttribute('data-format');
+                if (fmt === 'month-year') {
+                    el.textContent = utc.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+                } else {
+                    el.textContent = utc.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+                }
+            });
+        });
+    </script>
 </body>
 </html>

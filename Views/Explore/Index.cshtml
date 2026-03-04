@@ -535,7 +535,7 @@
                                         @journal.AuthorName
                                     }
                                 </div>
-                                <div class="journal-author-date">@journal.CreatedAt.ToString("MMM dd, yyyy")</div>
+                                <div class="journal-author-date"><time datetime="@journal.CreatedAt.ToString("o")"></time></div>
                             </div>
                             @if (journal.IsOwn)
                             {

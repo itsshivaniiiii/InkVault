@@ -265,7 +265,7 @@
 
         <div class="profile-info-item">
             <span class="profile-info-label">Member Since</span>
-            <span class="profile-info-value">@Model?.CreatedAt.ToString("MMMM yyyy")</span>
+            <span class="profile-info-value"><time datetime="@Model?.CreatedAt.ToString("o")" data-format="month-year"></time></span>
         </div>
     </div>
 

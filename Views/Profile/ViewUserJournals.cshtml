@@ -435,7 +435,7 @@
                         <div class="journal-meta">
                             <div class="meta-item">
                                 <i class="bi bi-calendar-event"></i>
-                                <span>@journal.CreatedAt.ToString("MMM dd, yyyy")</span>
+                                <span><time datetime="@journal.CreatedAt.ToString("o")"></time></span>
                             </div>
                             <div class="meta-item">
                                 <i class="bi bi-eye"></i>
