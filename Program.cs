@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using InkVault.Data;
 using InkVault.Models;
 using InkVault.Services;
@@ -8,17 +9,32 @@ using InkVault.Filters;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Get connection string from config
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+// Get connection string - try DATABASE_URL (Render) first, then config
+var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL");
+
+if (!string.IsNullOrEmpty(connectionString))
+{
+    // Render provides postgres:// URI format — convert to Npgsql format
+    if (connectionString.StartsWith("postgres://") || connectionString.StartsWith("postgresql://"))
+    {
+        var uri = new Uri(connectionString);
+        var userInfo = uri.UserInfo.Split(':');
+        connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={(userInfo.Length > 1 ? userInfo[1] : "")};SslMode=Require;Trust Server Certificate=true;";
+    }
+    Console.WriteLine("[STARTUP] Using DATABASE_URL from environment");
+}
+else
+{
+    connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    Console.WriteLine("[STARTUP] Using connection string from configuration");
+}
 
 if (string.IsNullOrEmpty(connectionString))
 {
-    throw new InvalidOperationException("Connection string 'DefaultConnection' not found in configuration.");
+    throw new InvalidOperationException("No database connection string found. Set DATABASE_URL or ConnectionStrings__DefaultConnection.");
 }
 
-Console.WriteLine("[STARTUP] Using connection string from appsettings");
-
-// Add database context with the connection string as-is
+// Add database context
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 
@@ -90,7 +106,31 @@ builder.Services.AddControllersWithViews(options =>
 // Register First Login Filter
 builder.Services.AddScoped<FirstLoginFilter>();
 
+// Configure forwarded headers for reverse proxy (Render/Docker)
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 var app = builder.Build();
+
+// Auto-apply pending migrations on startup (essential for Render deployment)
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    try
+    {
+        Console.WriteLine("[STARTUP] Applying pending database migrations...");
+        db.Database.Migrate();
+        Console.WriteLine("[STARTUP] Database migrations applied successfully.");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[STARTUP] Migration error: {ex.Message}");
+    }
+}
 
 if (app.Environment.IsDevelopment())
 {
@@ -102,7 +142,16 @@ else
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+// Only redirect to HTTPS in non-container environments
+// Render/Docker handles HTTPS at the reverse proxy level
+if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER")))
+{
+    app.UseForwardedHeaders();
+}
+else
+{
+    app.UseHttpsRedirection();
+}
 app.UseStaticFiles();
 
 app.UseRouting();

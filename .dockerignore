@@ -1,20 +1,19 @@
 # ===========================================
 # .dockerignore for InkVault
-# Excludes unnecessary files from Docker build
 # ===========================================
 
 # Git
 .git
 .gitignore
 .gitattributes
+.github
 
-# IDE and editors
+# IDE
 .vs/
 .vscode/
 .idea/
 *.user
 *.suo
-*.sln.docstates
 
 # Build outputs
 bin/
@@ -26,33 +25,45 @@ publish/
 *.nupkg
 packages/
 
-# Documentation
+# Docs
 *.md
-!README.md
 
 # Logs
 *.log
 Logs/
 
-# Local settings (IMPORTANT: Never include in Docker image)
+# Sensitive / local config
 appsettings.Development.json
 appsettings.Local.json
 appsettings.*.local.json
+appsettings.example.json
 secrets.json
 
-# Test results
-TestResults/
-coverage/
+# Database files
+*.db
+*.sqlite
+*.sql
 
-# Docker files (avoid recursive copy)
+# Python / scripts
+.venv/
+venv/
+*.py
+*.ps1
+*.sh
+
+# Dev artifacts
+*_NEW.cs
+*_OLD.cs
+Utilities/EmailDiagnostic.cs
+EMAIL_DIAGNOSTIC_INSTRUCTIONS.txt
+
+# Docker (avoid recursive)
 Dockerfile*
 docker-compose*
 .dockerignore
-
-# Render config
 render.yaml
 
-# Temporary files
+# Temp
 *.tmp
 *.temp
 *.bak
