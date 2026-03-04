@@ -9,17 +9,17 @@ using InkVault.Filters;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Get connection string - try DATABASE_URL (Render) first, then config
+// Get connection string - try DATABASE_URL (Render/Aiven) first, then config
 var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL");
 
 if (!string.IsNullOrEmpty(connectionString))
 {
-    // Render provides postgres:// URI format — convert to Npgsql format
+    // Convert postgres:// URI format to Npgsql format if needed
     if (connectionString.StartsWith("postgres://") || connectionString.StartsWith("postgresql://"))
     {
         var uri = new Uri(connectionString);
         var userInfo = uri.UserInfo.Split(':');
-        connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={(userInfo.Length > 1 ? userInfo[1] : "")};SslMode=Require;Trust Server Certificate=true;";
+        connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={(userInfo.Length > 1 ? userInfo[1] : "")};";
     }
     Console.WriteLine("[STARTUP] Using DATABASE_URL from environment");
 }
@@ -32,6 +32,17 @@ else
 if (string.IsNullOrEmpty(connectionString))
 {
     throw new InvalidOperationException("No database connection string found. Set DATABASE_URL or ConnectionStrings__DefaultConnection.");
+}
+
+// Ensure SSL settings for production (Aiven requires SSL + trust server cert)
+if (builder.Environment.IsProduction())
+{
+    var csb = new Npgsql.NpgsqlConnectionStringBuilder(connectionString)
+    {
+        SslMode = Npgsql.SslMode.Require,
+        TrustServerCertificate = true
+    };
+    connectionString = csb.ToString();
 }
 
 // Add database context

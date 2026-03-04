@@ -34,56 +34,26 @@ namespace InkVault
                 throw new InvalidOperationException("Connection string 'DefaultConnection' not found and DATABASE_URL not set.");
             }
 
-            Console.WriteLine($"[DbContextFactory] Environment: {environment}");
-            Console.WriteLine($"[DbContextFactory] Connection string contains: Database={(connectionString.Contains("inkvault_dev") ? "inkvault_dev" : "OTHER")}");
-            Console.WriteLine($"[DbContextFactory] Full connection (masked): {connectionString.Substring(0, Math.Min(100, connectionString.Length))}...");
-
-            // For development, use connection string as-is (which has SslMode=Disable)
-            // For production, ensure SSL is required
-            if (environment.Equals("Development", StringComparison.OrdinalIgnoreCase))
+            // Convert URI format if needed
+            if (connectionString.StartsWith("postgres://") || connectionString.StartsWith("postgresql://"))
             {
-                // DEVELOPMENT: Use connection string exactly as configured (with SslMode=Disable)
-                Console.WriteLine("[DbContextFactory] Using Development connection string with SslMode=Disable");
-                optionsBuilder.UseNpgsql(connectionString);
+                var uri = new Uri(connectionString);
+                var userInfo = uri.UserInfo.Split(':');
+                connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={(userInfo.Length > 1 ? userInfo[1] : "")};";
             }
-            else
+
+            // Parse through builder so SSL flags are always applied cleanly
+            var csb = new NpgsqlConnectionStringBuilder(connectionString);
+
+            if (!environment.Equals("Development", StringComparison.OrdinalIgnoreCase))
             {
-                // PRODUCTION: Parse and force SSL
-                try 
-                {
-                    var builder = new NpgsqlConnectionStringBuilder();
-
-                    if (connectionString.StartsWith("postgres://") || connectionString.StartsWith("postgresql://"))
-                    {
-                        var uri = new Uri(connectionString);
-                        var userInfo = uri.UserInfo.Split(':');
-                        
-                        builder.Host = uri.Host;
-                        builder.Port = uri.Port;
-                        builder.Database = uri.AbsolutePath.TrimStart('/');
-                        builder.Username = userInfo[0];
-                        builder.Password = userInfo.Length > 1 ? userInfo[1] : "";
-                    }
-                    else
-                    {
-                        builder.ConnectionString = connectionString;
-                    }
-
-                    // Force required SSL for production
-                    builder.SslMode = SslMode.Require;
-                    
-                    connectionString = builder.ToString();
-                    Console.WriteLine("[DbContextFactory] Using Production connection string with SslMode=Require");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[DbContextFactory] Error parsing connection string: {ex.Message}");
-                    // Use as-is if parsing fails
-                }
-
-                optionsBuilder.UseNpgsql(connectionString);
+                // Production / Aiven: require SSL and trust the server certificate
+                csb.SslMode = SslMode.Require;
+                csb.TrustServerCertificate = true;
+                Console.WriteLine("[DbContextFactory] SSL: SslMode=Require, TrustServerCertificate=true");
             }
-            
+
+            optionsBuilder.UseNpgsql(csb.ToString());
             return new ApplicationDbContext(optionsBuilder.Options);
         }
     }
