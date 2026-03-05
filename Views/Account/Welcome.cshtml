@@ -2,6 +2,7 @@
 
 @{
     ViewData["Title"] = "Login";
+    ViewData["ForceDark"] = true;
 }
 
 <div class="min-vh-100 d-flex align-items-center" style="background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 100%);">
@@ -84,10 +85,53 @@
         cursor: pointer;
         font-size: 0.9rem;
     }
-    
+
     #togglePassword:focus {
         outline: none;
         box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+
+    /* Force dark inputs regardless of theme setting */
+    .form-control, .form-select {
+        background-color: #1a1f2e !important;
+        border: 1px solid rgba(102, 126, 234, 0.3) !important;
+        color: #e0e0e0 !important;
+    }
+
+    .form-control::placeholder {
+        color: #7a7a8c !important;
+    }
+
+    .form-control:focus {
+        background-color: #1a1f2e !important;
+        border-color: #667eea !important;
+        color: #e0e0e0 !important;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25) !important;
+    }
+
+    .btn-outline-secondary {
+        background-color: #1a1f2e !important;
+        border-color: rgba(102, 126, 234, 0.3) !important;
+        color: #b0b0b0 !important;
+    }
+
+    .btn-outline-secondary:hover {
+        background-color: rgba(102, 126, 234, 0.2) !important;
+        color: #e0e0e0 !important;
+    }
+
+    .card {
+        background-color: #1a1f2e !important;
+        border: 1px solid rgba(102, 126, 234, 0.2) !important;
+        color: #e0e0e0 !important;
+    }
+
+    .card h3, .card label, .card p, .card a {
+        color: #e0e0e0 !important;
+    }
+
+    .form-check-label {
+        color: #b0b0b0 !important;
     }
 </style>
 
