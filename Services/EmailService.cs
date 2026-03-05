@@ -174,15 +174,10 @@ namespace InkVault.Services
                     new { type = "text/plain", value = plainText },
                     new { type = "text/html",  value = htmlBody  }
                 },
-                mail_settings = new
-                {
-                    bypass_spam_management = new { enable = false },
-                    footer = new { enable = false }
-                },
                 tracking_settings = new
                 {
-                    click_tracking   = new { enable = false },
-                    open_tracking    = new { enable = false },
+                    click_tracking        = new { enable = false },
+                    open_tracking         = new { enable = false },
                     subscription_tracking = new { enable = false }
                 }
             };
