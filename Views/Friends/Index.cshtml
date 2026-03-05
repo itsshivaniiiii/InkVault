@@ -804,15 +804,6 @@ function removeFriend(btn, friendId, userName) {
     }, { title: 'Remove Friend', confirmText: 'Remove', danger: true });
 }
 
-// Function to view user's public profile
-function viewProfile(userId) {
-    if (!userId) {
-        console.error('User ID is missing');
-        return;
-    }
-    window.location.href = `/Profile/ViewPublic?userId=${encodeURIComponent(userId)}`;
-}
-
 // Function to update counts
 function updateCounts() {
     fetch('/Friends/GetCounts')
@@ -879,6 +870,7 @@ function performSearch(query) {
 
 // Navigate to user profile with Friends context
 function viewProfile(userId) {
-    window.location.href = `/Profile/ViewPublic/${userId}?fromFriends=true`;
+    if (!userId) return;
+    window.location.href = `/Profile/ViewPublic?userId=${encodeURIComponent(userId)}&fromFriends=true`;
 }
 </script>
