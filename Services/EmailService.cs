@@ -117,19 +117,22 @@ namespace InkVault.Services
         {
             try
             {
-                // Try SendGrid API first (works on Render free tier — uses HTTPS, not SMTP)
-                var sendGridApiKey = _configuration["SendGrid:ApiKey"]
+                // Check env vars first (Render sets SENDGRID_API_KEY directly),
+                // then fall back to ASP.NET Core config sections (local appsettings / secrets)
+                var sendGridApiKey = Environment.GetEnvironmentVariable("SENDGRID_API_KEY")
                     ?? Environment.GetEnvironmentVariable("SendGrid__ApiKey")
-                    ?? Environment.GetEnvironmentVariable("SENDGRID_API_KEY");
+                    ?? _configuration["SendGrid:ApiKey"];
 
-                var senderEmail = _configuration["SendGrid:SenderEmail"]
-                    ?? _configuration["SmtpSettings:SenderEmail"]
-                    ?? Environment.GetEnvironmentVariable("SendGrid__SenderEmail")
-                    ?? Environment.GetEnvironmentVariable("SmtpSettings__SenderEmail");
+                var senderEmail = Environment.GetEnvironmentVariable("SendGrid__SenderEmail")
+                    ?? Environment.GetEnvironmentVariable("SmtpSettings__SenderEmail")
+                    ?? _configuration["SendGrid:SenderEmail"]
+                    ?? _configuration["SmtpSettings:SenderEmail"];
 
-                var senderName = _configuration["SendGrid:SenderName"]
-                    ?? Environment.GetEnvironmentVariable("SendGrid__SenderName")
+                var senderName = Environment.GetEnvironmentVariable("SendGrid__SenderName")
+                    ?? _configuration["SendGrid:SenderName"]
                     ?? "InkVault";
+
+                Console.WriteLine($"[EMAIL] ApiKey present: {!string.IsNullOrEmpty(sendGridApiKey)}, SenderEmail present: {!string.IsNullOrEmpty(senderEmail)}");
 
                 if (!string.IsNullOrEmpty(sendGridApiKey) && !string.IsNullOrEmpty(senderEmail))
                 {
@@ -153,23 +156,35 @@ namespace InkVault.Services
         {
             Console.WriteLine($"[EMAIL] Sending via SendGrid API to {toEmail}...");
 
-            var personalization = new Dictionary<string, object>
-            {
-                ["to"] = new[] { new { email = toEmail } }
-            };
-
-            // BCC the sender so a copy appears in their inbox
-            if (!string.Equals(toEmail, fromEmail, StringComparison.OrdinalIgnoreCase))
-            {
-                personalization["bcc"] = new[] { new { email = fromEmail } };
-            }
+            // Strip HTML tags for plain text fallback (spam filters prefer both)
+            var plainText = System.Text.RegularExpressions.Regex.Replace(htmlBody, "<[^>]+>", " ");
+            plainText = System.Text.RegularExpressions.Regex.Replace(plainText, @"\s{2,}", " ").Trim();
 
             var payload = new
             {
-                personalizations = new[] { personalization },
+                personalizations = new[]
+                {
+                    new { to = new[] { new { email = toEmail } } }
+                },
                 from = new { email = fromEmail, name = fromName },
+                reply_to = new { email = fromEmail, name = fromName },
                 subject,
-                content = new[] { new { type = "text/html", value = htmlBody } }
+                content = new[]
+                {
+                    new { type = "text/plain", value = plainText },
+                    new { type = "text/html",  value = htmlBody  }
+                },
+                mail_settings = new
+                {
+                    bypass_spam_management = new { enable = false },
+                    footer = new { enable = false }
+                },
+                tracking_settings = new
+                {
+                    click_tracking   = new { enable = false },
+                    open_tracking    = new { enable = false },
+                    subscription_tracking = new { enable = false }
+                }
             };
 
             var request = new HttpRequestMessage(HttpMethod.Post, "https://api.sendgrid.com/v3/mail/send")

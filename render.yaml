@@ -40,6 +40,8 @@ services:
         sync: false
       - key: SendGrid__SenderEmail
         sync: false
+      - key: SendGrid__SenderName
+        value: InkVault
 
       # --- Gemini AI (set in Render Dashboard) ---
       - key: Gemini__ApiKey
