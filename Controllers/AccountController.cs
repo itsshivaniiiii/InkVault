@@ -152,8 +152,11 @@ namespace InkVault.Controllers
                             var otp = _otpService.GenerateOTP();
                             user.OTP = otp;
                             user.OTPExpiration = DateTime.UtcNow.AddMinutes(10);
+                            user.OTPSentAt = DateTime.UtcNow;
+                            user.OTPResendCount = 0;
+                            user.OTPResendLockedUntil = null;
                             await _userManager.UpdateAsync(user);
-                            
+
                             System.Diagnostics.Debug.WriteLine($"[WELCOME_LOGIN] OTP generated and saved for: {user.UserName}");
                             
                             // Send OTP email
@@ -348,9 +351,10 @@ namespace InkVault.Controllers
                     var otp = _otpService.GenerateOTP();
                     user.OTP = otp;
                     user.OTPExpiration = DateTime.UtcNow.AddMinutes(10);
+                    user.OTPSentAt = DateTime.UtcNow;
+                    user.OTPResendCount = 0;
+                    user.OTPResendLockedUntil = null;
                     await _userManager.UpdateAsync(user);
-
-                    System.Diagnostics.Debug.WriteLine($"[REGISTER] Sending OTP email to: {model.Email}");
                     // Send OTP email asynchronously (non-blocking)
                     _ = _emailService.SendOTPAsync(model.Email, otp);
 
@@ -378,13 +382,23 @@ namespace InkVault.Controllers
         }
 
         [HttpGet]
-        public IActionResult VerifyOTP(string email, string purpose = "Registration")
+        public async Task<IActionResult> VerifyOTP(string email, string purpose = "Registration")
         {
             var model = new VerifyOTPViewModel
             {
                 Email = email,
                 Purpose = purpose
             };
+
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user != null)
+            {
+                ViewBag.OTPSentAt       = user.OTPSentAt;
+                ViewBag.ResendCount     = user.OTPResendCount;
+                ViewBag.IsLocked        = user.OTPResendLockedUntil.HasValue && user.OTPResendLockedUntil > DateTime.UtcNow;
+                ViewBag.LockedUntil     = user.OTPResendLockedUntil;
+            }
+
             return View(model);
         }
 
@@ -421,6 +435,9 @@ namespace InkVault.Controllers
                     user.EmailVerified = true;
                     user.OTP = null;
                     user.OTPExpiration = null;
+                    user.OTPSentAt = null;
+                    user.OTPResendCount = 0;
+                    user.OTPResendLockedUntil = null;
                     await _userManager.UpdateAsync(user);
                     TempData["Success"] = "Email verified successfully. You can now login.";
                     return RedirectToAction("Welcome");
@@ -435,6 +452,9 @@ namespace InkVault.Controllers
                     // Clear OTP and reset failed access count
                     user.OTP = null;
                     user.OTPExpiration = null;
+                    user.OTPSentAt = null;
+                    user.OTPResendCount = 0;
+                    user.OTPResendLockedUntil = null;
                     await _userManager.UpdateAsync(user);
                     
                     // Reset failed access count on successful OTP verification
@@ -473,6 +493,58 @@ namespace InkVault.Controllers
             }
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResendOTP(string email, string purpose)
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null)
+                return RedirectToAction("VerifyOTP", new { email, purpose });
+
+            // Check if account is locked out from too many resend attempts
+            if (user.OTPResendLockedUntil.HasValue && user.OTPResendLockedUntil > DateTime.UtcNow)
+            {
+                TempData["Error"] = $"Account locked. Try again after {user.OTPResendLockedUntil.Value:HH:mm} UTC.";
+                return RedirectToAction("VerifyOTP", new { email, purpose });
+            }
+
+            // Enforce 60-second cooldown
+            if (user.OTPSentAt.HasValue && (DateTime.UtcNow - user.OTPSentAt.Value).TotalSeconds < 60)
+            {
+                var wait = 60 - (int)(DateTime.UtcNow - user.OTPSentAt.Value).TotalSeconds;
+                TempData["Error"] = $"Please wait {wait} more second(s) before requesting a new OTP.";
+                return RedirectToAction("VerifyOTP", new { email, purpose });
+            }
+
+            // Check max resend attempts (3 allowed)
+            if (user.OTPResendCount >= 3)
+            {
+                user.OTPResendLockedUntil = DateTime.UtcNow.AddHours(1);
+                user.OTP = null;
+                user.OTPExpiration = null;
+                await _userManager.UpdateAsync(user);
+                TempData["Error"] = "Too many resend attempts. Account locked for 1 hour.";
+                return RedirectToAction("VerifyOTP", new { email, purpose });
+            }
+
+            // Generate new OTP — old one is automatically invalidated
+            var otp = _otpService.GenerateOTP();
+            user.OTP = otp;
+            user.OTPExpiration = DateTime.UtcNow.AddMinutes(10);
+            user.OTPSentAt = DateTime.UtcNow;
+            user.OTPResendCount++;
+            await _userManager.UpdateAsync(user);
+
+            _ = _emailService.SendOTPAsync(email, otp);
+
+            var remaining = 3 - user.OTPResendCount;
+            TempData["Success"] = remaining > 0
+                ? $"New OTP sent. {remaining} resend attempt(s) remaining."
+                : "New OTP sent. This was your last resend attempt.";
+
+            return RedirectToAction("VerifyOTP", new { email, purpose });
+        }
+
         [HttpGet]
         public IActionResult ForgotPassword()
         {
@@ -498,6 +570,9 @@ namespace InkVault.Controllers
                 var otp = _otpService.GenerateOTP();
                 user.OTP = otp;
                 user.OTPExpiration = DateTime.UtcNow.AddMinutes(10);
+                user.OTPSentAt = DateTime.UtcNow;
+                user.OTPResendCount = 0;
+                user.OTPResendLockedUntil = null;
                 await _userManager.UpdateAsync(user);
 
                 try
@@ -676,8 +751,11 @@ namespace InkVault.Controllers
                             var otp = _otpService.GenerateOTP();
                             user.OTP = otp;
                             user.OTPExpiration = DateTime.UtcNow.AddMinutes(10);
+                            user.OTPSentAt = DateTime.UtcNow;
+                            user.OTPResendCount = 0;
+                            user.OTPResendLockedUntil = null;
                             await _userManager.UpdateAsync(user);
-                            
+
                             System.Diagnostics.Debug.WriteLine($"[LOGIN] OTP generated and saved for: {user.UserName}");
                             
                             // Send OTP email

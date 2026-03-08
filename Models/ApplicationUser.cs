@@ -12,6 +12,9 @@ namespace InkVault.Models
         public string? Bio { get; set; } // Max 200 characters, emoji-supported
         public string? OTP { get; set; }
         public DateTime? OTPExpiration { get; set; }
+        public DateTime? OTPSentAt { get; set; }
+        public int OTPResendCount { get; set; } = 0;
+        public DateTime? OTPResendLockedUntil { get; set; }
         public bool EmailVerified { get; set; }
         public bool HasCompletedFirstLogin { get; set; } = false;
         public string ThemePreference { get; set; } = "dark";

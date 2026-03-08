@@ -2,38 +2,58 @@
 
 @{
     ViewData["Title"] = "Verify OTP";
+    ViewData["ForceDark"] = true;
     string title = Model?.Purpose switch
     {
-        "Login" => "OTP Verification for Login",
-        "Registration" => "Verify Your Email",
+        "Login"         => "OTP Verification for Login",
+        "Registration"  => "Verify Your Email",
         "PasswordReset" => "Verify Your Email",
-        _ => "Verify Your OTP"
+        _               => "Verify Your OTP"
     };
+
+    bool isLocked       = ViewBag.IsLocked ?? false;
+    DateTime? lockedUntil = ViewBag.LockedUntil;
+    int resendCount     = ViewBag.ResendCount ?? 0;
+    int resendRemaining = 3 - resendCount;
+    DateTime? otpSentAt = ViewBag.OTPSentAt;
+    int secondsSinceSent = otpSentAt.HasValue ? (int)(DateTime.UtcNow - otpSentAt.Value).TotalSeconds : 61;
+    int cooldownRemaining = Math.Max(0, 60 - secondsSinceSent);
 }
 
 <div class="min-vh-100 d-flex align-items-center" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-md-5">
-                <div class="card shadow-lg" style="border: none; border-radius: 15px;">
+                <div class="card shadow-lg" style="border: none; border-radius: 15px; background: #1a1f2e; border: 1px solid rgba(102,126,234,0.2);">
                     <div class="card-body p-5">
-                        <h3 class="card-title text-center mb-4">@title</h3>
+                        <h3 class="card-title text-center mb-4" style="color: #e0e0e0;">@title</h3>
 
-                        <p class="text-center text-muted mb-4">
+                        <p class="text-center mb-4" style="color: #b0b0b0;">
                             @if (Model?.Purpose == "Login")
                             {
-                                <span>We sent a 6-digit OTP to <strong>@Model.Email</strong><br />Please enter it to complete your login.</span>
+                                <span>We sent a 6-digit OTP to <strong style="color:#e0e0e0;">@Model.Email</strong><br />Please enter it to complete your login.</span>
                             }
                             else
                             {
-                                <span>We sent a 6-digit OTP to <strong>@Model.Email</strong></span>
+                                <span>We sent a 6-digit OTP to <strong style="color:#e0e0e0;">@Model.Email</strong></span>
                             }
                         </p>
 
+                        @if (isLocked)
+                        {
+                            <div class="alert" style="background: rgba(244,67,54,0.15); border: 1px solid rgba(244,67,54,0.3); color: #ff6b6b; border-radius: 8px;">
+                                <i class="bi bi-lock-fill"></i>
+                                <strong>Account locked.</strong> Too many resend attempts.<br />
+                                @if (lockedUntil.HasValue)
+                                {
+                                    <small>Try again after @lockedUntil.Value.ToString("HH:mm") UTC.</small>
+                                }
+                            </div>
+                        }
+
                         <form method="post">
                             @Html.AntiForgeryToken()
-                            
-                            <input type="hidden" name="Email" value="@Model.Email" />
+                            <input type="hidden" name="Email"   value="@Model.Email" />
                             <input type="hidden" name="Purpose" value="@Model.Purpose" />
 
                             @if (!ViewData.ModelState.IsValid)
@@ -44,25 +64,61 @@
                             }
 
                             <div class="mb-3">
-                                <label asp-for="OTP" class="form-label">Enter OTP</label>
-                                <input asp-for="OTP" class="form-control form-control-lg text-center" 
-                                       placeholder="000000" maxlength="6" inputmode="numeric" required />
+                                <label asp-for="OTP" class="form-label" style="color:#b0b0b0;">Enter OTP</label>
+                                <input asp-for="OTP" class="form-control form-control-lg text-center"
+                                       placeholder="000000" maxlength="6" inputmode="numeric" required
+                                       style="background:#0f1419; border:1px solid rgba(102,126,234,0.3); color:#e0e0e0; letter-spacing:8px; font-size:1.5rem;"
+                                       id="OTP" />
+                                @if (isLocked) {
+                                    <script>document.getElementById('OTP').disabled = true;</script>
+                                }
                                 <span asp-validation-for="OTP" class="text-danger"></span>
                             </div>
 
-                            <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">
-                                @if (Model?.Purpose == "Login")
-                                {
-                                    <span>Complete Login</span>
-                                }
-                                else
-                                {
-                                    <span>Verify OTP</span>
-                                }
+                            <button type="submit" class="btn btn-primary w-100 py-2 fw-bold" id="submitBtn">
+                                @if (Model?.Purpose == "Login") { <span>Complete Login</span> }
+                                else { <span>Verify OTP</span> }
                             </button>
+                            @if (isLocked) {
+                                <script>document.getElementById('submitBtn').disabled = true;</script>
+                            }
                         </form>
 
-                        <p class="text-center text-muted mt-4 small">
+                        @if (!isLocked)
+                        {
+                            <!-- Resend OTP section -->
+                            <div class="mt-4 text-center">
+                                <p class="mb-2" style="color:#b0b0b0; font-size:0.85rem;">
+                                    Didn't receive the OTP?
+                                    @if (resendRemaining > 0)
+                                    {
+                                        <span id="attemptsLeft">(@resendRemaining resend attempt@(resendRemaining != 1 ? "s" : "") remaining)</span>
+                                    }
+                                    else
+                                    {
+                                        <span style="color:#ff6b6b;">No resend attempts remaining.</span>
+                                    }
+                                </p>
+
+                                @if (resendRemaining > 0)
+                                {
+                                    <form method="post" asp-action="ResendOTP" id="resendForm">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="email"   value="@Model.Email" />
+                                        <input type="hidden" name="purpose" value="@Model.Purpose" />
+                                        <button type="submit" id="resendBtn"
+                                                class="btn w-100 py-2"
+                                                style="background: rgba(102,126,234,0.15); border: 1px solid rgba(102,126,234,0.4); color: #667eea; font-weight: 600; border-radius: 8px;"
+                                                disabled>
+                                            <i class="bi bi-arrow-clockwise"></i>
+                                            <span id="resendBtnText">Resend OTP (<span id="countdown">@cooldownRemaining</span>s)</span>
+                                        </button>
+                                    </form>
+                                }
+                            </div>
+                        }
+
+                        <p class="text-center mt-3" style="color:#7a7a8c; font-size:0.8rem;">
                             OTP expires in 10 minutes
                         </p>
                     </div>
@@ -76,8 +132,38 @@
     <partial name="_ValidationScriptsPartial" />
     <script>
         // Allow only numeric input
-        document.getElementById("OTP").addEventListener("input", function(e) {
-            this.value = this.value.replace(/[^0-9]/g, '');
-        });
+        const otpInput = document.getElementById('OTP');
+        if (otpInput) {
+            otpInput.addEventListener('input', function () {
+                this.value = this.value.replace(/[^0-9]/g, '');
+            });
+        }
+
+        // Countdown + resend button activation
+        var remaining = @cooldownRemaining;
+        var resendBtn  = document.getElementById('resendBtn');
+        var countdown  = document.getElementById('countdown');
+        var resendText = document.getElementById('resendBtnText');
+
+        if (resendBtn && remaining > 0) {
+            var timer = setInterval(function () {
+                remaining--;
+                if (countdown) countdown.textContent = remaining;
+                if (remaining <= 0) {
+                    clearInterval(timer);
+                    resendBtn.disabled = false;
+                    resendBtn.style.background  = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                    resendBtn.style.color       = 'white';
+                    resendBtn.style.borderColor = 'transparent';
+                    if (resendText) resendText.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Resend OTP';
+                }
+            }, 1000);
+        } else if (resendBtn && remaining <= 0) {
+            resendBtn.disabled = false;
+            resendBtn.style.background  = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            resendBtn.style.color       = 'white';
+            resendBtn.style.borderColor = 'transparent';
+            if (resendText) resendText.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Resend OTP';
+        }
     </script>
 }
