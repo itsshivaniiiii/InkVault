@@ -19,21 +19,22 @@ namespace InkVault.Filters
             // Check if user is authenticated
             if (context.HttpContext.User?.Identity?.IsAuthenticated ?? false)
             {
-                var userId = _userManager.GetUserId(context.HttpContext.User);
-                if (!string.IsNullOrEmpty(userId))
+                try
                 {
-                    var user = await _userManager.FindByIdAsync(userId);
-                    if (user != null)
+                    var userId = _userManager.GetUserId(context.HttpContext.User);
+                    if (!string.IsNullOrEmpty(userId))
                     {
-                        // Pass first login status to all views
-                        // This will show Getting Started section throughout the entire first login session
-                        bool isFirstLoginSession = !user.HasCompletedFirstLogin;
-                        
-                        if (context.Controller is Controller controller)
+                        var user = await _userManager.FindByIdAsync(userId);
+                        if (user != null && context.Controller is Controller controller)
                         {
-                            controller.ViewData["IsFirstLogin"] = isFirstLoginSession;
+                            controller.ViewData["IsFirstLogin"] = !user.HasCompletedFirstLogin;
                         }
                     }
+                }
+                catch (Exception ex)
+                {
+                    // Gracefully continue if DB schema is temporarily out of sync (e.g. pending migration)
+                    Console.WriteLine($"[FirstLoginFilter] Non-fatal error: {ex.Message}");
                 }
             }
 

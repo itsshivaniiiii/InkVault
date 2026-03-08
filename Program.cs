@@ -131,21 +131,35 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 
 var app = builder.Build();
 
-// Auto-apply pending migrations on startup
+// Auto-apply pending migrations on startup with retry (Aiven/Render cold start can be slow)
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    try
+    var maxRetries = 5;
+    var delay = 5;
+    for (var attempt = 1; attempt <= maxRetries; attempt++)
     {
-        Console.WriteLine("[STARTUP] Applying pending database migrations...");
-        db.Database.SetCommandTimeout(TimeSpan.FromSeconds(120));
-        db.Database.Migrate();
-        Console.WriteLine("[STARTUP] Database migrations applied successfully.");
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"[STARTUP] Migration warning (non-fatal): {ex.Message}");
-        // Don't crash the app — migrations may already be applied
+        try
+        {
+            Console.WriteLine($"[STARTUP] Applying migrations (attempt {attempt}/{maxRetries})...");
+            db.Database.SetCommandTimeout(TimeSpan.FromSeconds(120));
+            db.Database.Migrate();
+            Console.WriteLine("[STARTUP] Database migrations applied successfully.");
+            break;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[STARTUP] Migration attempt {attempt} failed: {ex.Message}");
+            if (attempt == maxRetries)
+            {
+                // On final failure, crash loudly so Render shows the real error
+                Console.WriteLine("[STARTUP] FATAL: All migration attempts failed. Halting startup.");
+                throw;
+            }
+            Console.WriteLine($"[STARTUP] Retrying in {delay}s...");
+            Thread.Sleep(TimeSpan.FromSeconds(delay));
+            delay *= 2; // exponential backoff: 5s, 10s, 20s, 40s
+        }
     }
 }
 
