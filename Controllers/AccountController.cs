@@ -96,7 +96,7 @@ namespace InkVault.Controllers
                 var result = await _signInManager.PasswordSignInAsync(
                     user,
                     model.Password,
-                    isPersistent: model.RememberMe,
+                    isPersistent: true,
                     lockoutOnFailure: true); // Enable lockout on failure
 
                 System.Diagnostics.Debug.WriteLine($"[WELCOME_LOGIN] Sign in result: Succeeded={result.Succeeded}, IsLockedOut={result.IsLockedOut}, RequiresTwoFactor={result.RequiresTwoFactor}");
@@ -225,11 +225,11 @@ namespace InkVault.Controllers
                 if (result.RequiresTwoFactor)
                 {
                     System.Diagnostics.Debug.WriteLine($"[WELCOME_LOGIN] Two-factor required for: {user.UserName}");
-                    return RedirectToAction("LoginWith2fa", new { rememberMe = model.RememberMe });
+                    return RedirectToAction("LoginWith2fa", new { rememberMe = true });
                 }
 
                 System.Diagnostics.Debug.WriteLine($"[WELCOME_LOGIN] ? Password incorrect for: {user.UserName}");
-                
+
                 // Check if user is now locked out after this failed attempt
                 if (await _userManager.IsLockedOutAsync(user))
                 {
@@ -461,7 +461,7 @@ namespace InkVault.Controllers
                     await _userManager.ResetAccessFailedCountAsync(user);
                     
                     // Sign in the user
-                    await _signInManager.SignInAsync(user, isPersistent: false);
+                    await _signInManager.SignInAsync(user, isPersistent: true);
                     
                     System.Diagnostics.Debug.WriteLine($"[LOGIN_OTP] OTP verified successfully for: {user.UserName}");
                     
@@ -705,7 +705,7 @@ namespace InkVault.Controllers
                 var result = await _signInManager.PasswordSignInAsync(
                     user,
                     model.Password,
-                    isPersistent: model.RememberMe,
+                    isPersistent: true,
                     lockoutOnFailure: true); // Enable lockout on failure
 
                 System.Diagnostics.Debug.WriteLine($"[LOGIN] Sign in result: Succeeded={result.Succeeded}, IsLockedOut={result.IsLockedOut}, RequiresTwoFactor={result.RequiresTwoFactor}");
@@ -851,11 +851,11 @@ namespace InkVault.Controllers
                 if (result.RequiresTwoFactor)
                 {
                     System.Diagnostics.Debug.WriteLine($"[LOGIN] Two-factor required for: {user.UserName}");
-                    return RedirectToAction("LoginWith2fa", new { rememberMe = model.RememberMe });
+                    return RedirectToAction("LoginWith2fa", new { rememberMe = true });
                 }
 
                 System.Diagnostics.Debug.WriteLine($"[LOGIN] Invalid password for: {user.UserName}");
-                
+
                 // Check if user is now locked out after this failed attempt
                 if (await _userManager.IsLockedOutAsync(user))
                 {

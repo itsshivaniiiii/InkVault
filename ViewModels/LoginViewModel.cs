@@ -12,12 +12,5 @@ namespace InkVault.ViewModels
         [DataType(DataType.Password)]
         [Display(Name = "Password")]
         public string Password { get; set; } = null!;
-
-        /// <summary>
-        /// Optional: When true, creates a persistent authentication cookie
-        /// that survives browser closure. When false, session-based auth only.
-        /// </summary>
-        [Display(Name = "Remember me")]
-        public bool RememberMe { get; set; } = false;
     }
 }
