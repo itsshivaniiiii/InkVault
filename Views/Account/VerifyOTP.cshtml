@@ -58,8 +58,8 @@
 
                             @if (!ViewData.ModelState.IsValid)
                             {
-                                <div asp-validation-summary="All" class="alert alert-danger alert-dismissible fade show">
-                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                <div asp-validation-summary="ModelOnly" class="alert alert-danger alert-dismissible fade show" style="padding-right: 2.5rem;">
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" style="position: absolute; top: 0.5rem; right: 0.5rem;"></button>
                                 </div>
                             }
 

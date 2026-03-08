@@ -333,17 +333,32 @@ namespace InkVault.Services
         /// <summary>
         /// Send login notification email with browser info
         /// </summary>
+        private static DateTime ToIST(DateTime utcTime)
+        {
+            try
+            {
+                var ist = TimeZoneInfo.FindSystemTimeZoneById(
+                    OperatingSystem.IsWindows() ? "India Standard Time" : "Asia/Kolkata");
+                return TimeZoneInfo.ConvertTimeFromUtc(
+                    DateTime.SpecifyKind(utcTime, DateTimeKind.Utc), ist);
+            }
+            catch
+            {
+                return utcTime.AddHours(5).AddMinutes(30);
+            }
+        }
+
         public async Task SendLoginNotificationEmailAsync(ApplicationUser user, string browserName)
         {
             try
             {
                 var preferences = await GetOrCreateNotificationPreferencesAsync(user.Id);
-                
+
                 if (!preferences.EmailOnSuccessfulLogin)
                     return;
 
                 var subject = "Login Activity - InkVault Account";
-                var loginTime = DateTime.Now.ToString("MMMM dd, yyyy 'at' hh:mm tt");
+                var loginTime = ToIST(DateTime.UtcNow).ToString("MMMM dd, yyyy 'at' hh:mm tt 'IST'");
                 
                 var body = $@"<!DOCTYPE html>
 <html>
@@ -524,7 +539,7 @@ namespace InkVault.Services
                 // For now, we'll always send it
 
                 var subject = $"Full Text Request for '{journal.Title}'";
-                var requestTime = DateTime.UtcNow.ToString("MMMM dd, yyyy 'at' hh:mm tt UTC");
+                var requestTime = ToIST(DateTime.UtcNow).ToString("MMMM dd, yyyy 'at' hh:mm tt 'IST'");
 
                 var body = $@"<!DOCTYPE html>
 <html>

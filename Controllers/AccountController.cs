@@ -535,7 +535,7 @@ namespace InkVault.Controllers
             user.OTPResendCount++;
             await _userManager.UpdateAsync(user);
 
-            _ = _emailService.SendOTPAsync(email, otp);
+            _ = _emailService.SendOTPAsync(email, otp, purpose);
 
             var remaining = 3 - user.OTPResendCount;
             TempData["Success"] = remaining > 0
@@ -790,7 +790,10 @@ namespace InkVault.Controllers
                         
                         if (notificationPref != null && notificationPref.EmailOnSuccessfulLogin)
                         {
-                            var loginTime = DateTime.UtcNow.ToString("F");
+                            var istZone = TimeZoneInfo.FindSystemTimeZoneById(
+                                OperatingSystem.IsWindows() ? "India Standard Time" : "Asia/Kolkata");
+                            var loginTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, istZone)
+                                .ToString("MMMM dd, yyyy 'at' hh:mm tt 'IST'");
                             var subject = "Login Alert - InkVault";
                             var htmlBody = $@"
                                 <html>

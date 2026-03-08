@@ -5,7 +5,7 @@ namespace InkVault.Services
 {
     public interface IEmailService
     {
-        Task SendOTPAsync(string email, string otp);
+        Task SendOTPAsync(string email, string otp, string purpose = "Registration");
         Task SendEmailAsync(string email, string subject, string htmlBody);
     }
 
@@ -22,11 +22,32 @@ namespace InkVault.Services
             _httpClient = httpClient;
         }
 
-        public async Task SendOTPAsync(string email, string otp)
+        public async Task SendOTPAsync(string email, string otp, string purpose = "Registration")
         {
             _logger.LogInformation("Preparing to send OTP email to {Email}", email);
-            
-            var subject = "Email Verification - InkVault";
+
+            var (subject, headerTitle, headerSubtitle, bodyIntro) = purpose switch
+            {
+                "Login" => (
+                    "Login Verification - InkVault",
+                    "Login Verification",
+                    "Complete your InkVault login",
+                    "A one-time password has been requested to complete your login. Use the code below to verify your identity:"
+                ),
+                "PasswordReset" => (
+                    "Password Reset - InkVault",
+                    "Password Reset",
+                    "Reset your InkVault password",
+                    "We received a request to reset your password. Use the one-time password below to proceed:"
+                ),
+                _ => (
+                    "Email Verification - InkVault",
+                    "Email Verification",
+                    "Confirm your InkVault account",
+                    "Thank you for signing up with InkVault! To complete your account verification, please use the one-time password below:"
+                )
+            };
+
             var body = $@"
 <!DOCTYPE html>
 <html>
@@ -61,14 +82,14 @@ namespace InkVault.Services
         <div class='container'>
             <!-- Header -->
             <div class='header'>
-                <h1>Email Verification</h1>
-                <p>Confirm your InkVault account</p>
+                <h1>{headerTitle}</h1>
+                <p>{headerSubtitle}</p>
             </div>
 
             <!-- Content -->
             <div class='content'>
                 <p class='greeting'>Hi there,</p>
-                <p class='greeting'>Thank you for signing up with InkVault! To complete your account verification, please use the one-time password below:</p>
+                <p class='greeting'>{bodyIntro}</p>
 
                 <!-- OTP Section -->
                 <div class='otp-section'>
