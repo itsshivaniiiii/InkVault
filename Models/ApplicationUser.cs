@@ -22,6 +22,11 @@ namespace InkVault.Models
         public DateTime? LastLoginAt { get; set; }
         public DateTime? LastBirthdayEmailSent { get; set; }
 
+        // Write streak tracking
+        public int CurrentStreak { get; set; } = 0;
+        public int LongestStreak { get; set; } = 0;
+        public DateTime? LastWriteDate { get; set; }
+
         // Friend relationships
         public ICollection<Friend>? FriendsInitiated { get; set; } = new List<Friend>();
         public ICollection<Friend>? FriendsReceived { get; set; } = new List<Friend>();
@@ -42,5 +47,12 @@ namespace InkVault.Models
 
         // Notification preferences
         public NotificationPreference? NotificationPreference { get; set; }
+
+        // Block relationships
+        public ICollection<BlockedUser>? BlockedUsers { get; set; } = new List<BlockedUser>();
+        public ICollection<BlockedUser>? BlockedByUsers { get; set; } = new List<BlockedUser>();
+
+        // In-app notifications
+        public ICollection<AppNotification>? AppNotifications { get; set; } = new List<AppNotification>();
     }
 }

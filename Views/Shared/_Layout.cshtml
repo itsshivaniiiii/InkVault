@@ -466,6 +466,26 @@
             font-family: 'Segoe UI', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
         }
 
+        /* Notification bell badge */
+        .notif-bell-link { position: relative; }
+        .notif-bell-badge {
+            position: absolute;
+            top: 2px;
+            right: -2px;
+            min-width: 18px;
+            height: 18px;
+            border-radius: 9px;
+            background: #e91e63;
+            color: #fff;
+            font-size: .65rem;
+            font-weight: 700;
+            line-height: 18px;
+            text-align: center;
+            padding: 0 4px;
+            display: none;
+            pointer-events: none;
+        }
+
         [data-theme="light"] .btn-primary {
             background-color: #667eea !important;
             border-color: #667eea !important;
@@ -690,6 +710,12 @@
                                     <i class="bi bi-people"></i> Friends
                                 </a>
                             </li>
+                            <li class="nav-item notif-bell-link" style="margin-left: 8px;">
+                                <a class="nav-link" asp-controller="Notification" asp-action="Inbox" title="Notifications">
+                                    <i class="bi bi-bell"></i>
+                                    <span id="notifBadge" class="notif-bell-badge"></span>
+                                </a>
+                            </li>
                         }
                     </ul>
                     <ul class="navbar-nav">
@@ -827,14 +853,16 @@
                     }
                 }
 
-                // Update UI once DOM is ready
+                // Update UI once DOM is ready — always defer to DOMContentLoaded so the
+                // navbar elements are guaranteed to exist before we touch them.
                 if (document.readyState === 'loading') {
                     document.addEventListener('DOMContentLoaded', () => updateUI(storedTheme));
                 } else {
-                    updateUI(storedTheme);
+                    // DOM already parsed; still defer a tick so layout finishes rendering
+                    setTimeout(() => updateUI(storedTheme), 0);
                 }
 
-                // Setup theme toggle
+                // Setup theme toggle — always wait for DOM
                 function setupToggle() {
                     const themeToggle = document.getElementById('themeToggle');
                     if (!themeToggle || FORCE_DARK) return;
@@ -843,24 +871,17 @@
                         e.preventDefault();
                         e.stopPropagation();
 
-                        // Get current theme
                         const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
-
-                        // Calculate new theme
                         const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
 
-                        // Apply immediately to DOM
                         document.documentElement.setAttribute('data-theme', newTheme);
                         document.body.setAttribute('data-theme', newTheme);
 
-                        // Save to localStorage IMMEDIATELY
                         localStorage.setItem(THEME_STORAGE_KEY, newTheme);
                         localStorage.setItem('theme', newTheme);
-                        
-                        // Update UI
+
                         updateUI(newTheme);
-                        
-                        // Try to sync with server (non-blocking)
+
                         fetch('@Url.Action("ChangeTheme", "Profile")', {
                             method: 'POST',
                             headers: {
@@ -869,17 +890,15 @@
                             },
                             credentials: 'same-origin',
                             body: JSON.stringify({ theme: newTheme })
-                        }).catch(() => {
-                            console.log('Server sync skipped - using localStorage only');
-                        });
+                        }).catch(() => {});
                     });
                 }
-                
-                // Setup once DOM is ready
+
+                // Always wait for DOMContentLoaded so the navbar <li> is present
                 if (document.readyState === 'loading') {
                     document.addEventListener('DOMContentLoaded', setupToggle);
                 } else {
-                    setupToggle();
+                    setTimeout(setupToggle, 0);
                 }
             })();
             
@@ -977,6 +996,25 @@
                 btnEl.onclick = function() { modal.hide(); onConfirm(); };
                 modal.show();
             }
+
+            // Notification bell badge — refresh every 60 s
+            async function loadNotifBadge() {
+                try {
+                    const res = await fetch('@Url.Action("GetUnreadCount","Notification")');
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    const badge = document.getElementById('notifBadge');
+                    if (!badge) return;
+                    if (data.count > 0) {
+                        badge.textContent = data.count > 99 ? '99+' : data.count;
+                        badge.style.display = 'block';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                } catch {}
+            }
+            document.addEventListener('DOMContentLoaded', loadNotifBadge);
+            setInterval(loadNotifBadge, 60000);
 
             // Display TempData messages as toasts
             @if (TempData["Success"] != null) {

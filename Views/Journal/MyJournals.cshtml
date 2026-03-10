@@ -396,6 +396,43 @@
         text-decoration: underline;
     }
 
+    .tile-stats {
+        display: flex;
+        gap: 14px;
+        margin-bottom: 12px;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+    }
+
+    .tile-stat {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .tile-stat i {
+        font-size: 0.9rem;
+        color: #667eea;
+    }
+
+    .tile-btn-pin {
+        background: rgba(102, 126, 234, 0.15);
+        color: #667eea;
+        border: 1px solid rgba(102, 126, 234, 0.3);
+    }
+
+    .tile-btn-pin:hover {
+        background: rgba(102, 126, 234, 0.25);
+        color: #667eea;
+        text-decoration: none;
+    }
+
+    .tile-btn-pin.pinned {
+        background: rgba(102, 126, 234, 0.3);
+        color: #667eea;
+        border-color: #667eea;
+    }
+
 </style>
 
 <div class="journals-container">
@@ -409,9 +446,14 @@
             <i class="bi bi-book" style="font-size: 2.5rem; color: #667eea;"></i>
             <h1>My Journals</h1>
         </div>
-        <a href="@Url.Action("Create", "Journal")" class="create-btn">
-            <i class="bi bi-plus-circle"></i> Create New
-        </a>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <a href="@Url.Action("Stats", "Journal")" class="create-btn" style="background: rgba(102, 126, 234, 0.2); color: #667eea; border: 1px solid rgba(102, 126, 234, 0.3);">
+                <i class="bi bi-bar-chart-line"></i> My Stats
+            </a>
+            <a href="@Url.Action("Create", "Journal")" class="create-btn">
+                <i class="bi bi-plus-circle"></i> Create New
+            </a>
+        </div>
     </div>
 
     @if (Model.Any())
@@ -488,7 +530,22 @@
                                 <i class="bi bi-calendar-event"></i>
                                 <time datetime="@journal.CreatedAt.ToString("o")"></time>
                             </div>
+                            <div class="meta-date">
+                                <i class="bi bi-clock"></i>
+                                <span>@journal.ReadingTimeMinutes min read</span>
+                            </div>
 
+                            <div class="tile-stats">
+                                <span class="tile-stat">
+                                    <i class="bi bi-heart-fill"></i> @journal.LikeCount
+                                </span>
+                                <span class="tile-stat">
+                                    <i class="bi bi-chat-fill"></i> @journal.CommentCount
+                                </span>
+                                <span class="tile-stat">
+                                    <i class="bi bi-eye-fill"></i> @journal.ViewCount
+                                </span>
+                            </div>
                             <div class="tile-actions">
                                 <a href="@Url.Action("Edit", "Journal", new { id = journal.JournalId })" class="tile-btn tile-btn-edit">
                                     <i class="bi bi-pencil"></i> Edit
@@ -496,6 +553,12 @@
                                 <a href="@Url.Action("View", "Journal", new { id = journal.JournalId })" class="tile-btn tile-btn-view">
                                     <i class="bi bi-eye"></i> View
                                 </a>
+                                <button type="button" class="tile-btn tile-btn-pin @(journal.IsPinned ? "pinned" : "")"
+                                        onclick="toggleJournalPin(@journal.JournalId, this)"
+                                        title="@(journal.IsPinned ? "Unpin from profile" : "Pin to profile")">
+                                    <i class="bi @(journal.IsPinned ? "bi-pin-fill" : "bi-pin")"></i>
+                                    <span>@(journal.IsPinned ? "Pinned" : "Pin")</span>
+                                </button>
                                 <button type="button" class="tile-btn tile-btn-delete" onclick="showDeleteConfirmation(@journal.JournalId, '@journal.Title')">
                                     <i class="bi bi-trash"></i> Delete
                                 </button>
@@ -567,7 +630,22 @@
                                 <i class="bi bi-calendar-event"></i>
                                 <time datetime="@journal.CreatedAt.ToString("o")"></time>
                             </div>
+                            <div class="meta-date">
+                                <i class="bi bi-clock"></i>
+                                <span>@journal.ReadingTimeMinutes min read</span>
+                            </div>
 
+                            <div class="tile-stats">
+                                <span class="tile-stat">
+                                    <i class="bi bi-heart-fill"></i> @journal.LikeCount
+                                </span>
+                                <span class="tile-stat">
+                                    <i class="bi bi-chat-fill"></i> @journal.CommentCount
+                                </span>
+                                <span class="tile-stat">
+                                    <i class="bi bi-eye-fill"></i> @journal.ViewCount
+                                </span>
+                            </div>
                             <div class="tile-actions">
                                 <a href="@Url.Action("Edit", "Journal", new { id = journal.JournalId })" class="tile-btn tile-btn-edit">
                                     <i class="bi bi-pencil"></i> Edit
@@ -575,6 +653,12 @@
                                 <a href="@Url.Action("View", "Journal", new { id = journal.JournalId })" class="tile-btn tile-btn-view">
                                     <i class="bi bi-eye"></i> View
                                 </a>
+                                <button type="button" class="tile-btn tile-btn-pin @(journal.IsPinned ? "pinned" : "")"
+                                        onclick="toggleJournalPin(@journal.JournalId, this)"
+                                        title="@(journal.IsPinned ? "Unpin from profile" : "Pin to profile")">
+                                    <i class="bi @(journal.IsPinned ? "bi-pin-fill" : "bi-pin")"></i>
+                                    <span>@(journal.IsPinned ? "Pinned" : "Pin")</span>
+                                </button>
                                 <button type="button" class="tile-btn tile-btn-delete" onclick="showDeleteConfirmation(@journal.JournalId, '@journal.Title')">
                                     <i class="bi bi-trash"></i> Delete
                                 </button>
@@ -637,7 +721,22 @@
                                 <i class="bi bi-calendar-event"></i>
                                 <time datetime="@journal.CreatedAt.ToString("o")"></time>
                             </div>
+                            <div class="meta-date">
+                                <i class="bi bi-clock"></i>
+                                <span>@journal.ReadingTimeMinutes min read</span>
+                            </div>
 
+                            <div class="tile-stats">
+                                <span class="tile-stat">
+                                    <i class="bi bi-heart-fill"></i> @journal.LikeCount
+                                </span>
+                                <span class="tile-stat">
+                                    <i class="bi bi-chat-fill"></i> @journal.CommentCount
+                                </span>
+                                <span class="tile-stat">
+                                    <i class="bi bi-eye-fill"></i> @journal.ViewCount
+                                </span>
+                            </div>
                             <div class="tile-actions">
                                 <a href="@Url.Action("Edit", "Journal", new { id = journal.JournalId })" class="tile-btn tile-btn-edit">
                                     <i class="bi bi-pencil"></i> Edit
@@ -717,16 +816,43 @@
 <script>
 // Global variables to store URLs
 var deleteUrl = '@Url.Action("Delete", "Journal")';
+var togglePinUrl = '@Url.Action("TogglePin", "Profile")';
 
 function showDeleteConfirmation(journalId, journalTitle) {
     document.getElementById('journalTitleDisplay').textContent = journalTitle;
-    
-    // Set the form action to include the journal ID
     const form = document.getElementById('deleteForm');
     form.action = deleteUrl + '/' + journalId;
-    
-    // Show the modal
     const modal = new bootstrap.Modal(document.getElementById('deleteConfirmationModal'));
     modal.show();
+}
+
+function toggleJournalPin(journalId, btn) {
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+    fetch(togglePinUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'RequestVerificationToken': token || ''
+        },
+        body: `journalId=${journalId}`
+    })
+    .then(r => { if (!r.ok) return r.json().then(d => { throw new Error(d.message || 'Failed'); }); return r.json(); })
+    .then(data => {
+        const icon = btn.querySelector('i');
+        const label = btn.querySelector('span');
+        if (data.isPinned) {
+            btn.classList.add('pinned');
+            icon.className = 'bi bi-pin-fill';
+            label.textContent = 'Pinned';
+            btn.title = 'Unpin from profile';
+        } else {
+            btn.classList.remove('pinned');
+            icon.className = 'bi bi-pin';
+            label.textContent = 'Pin';
+            btn.title = 'Pin to profile';
+        }
+        showToast(data.message, 'success');
+    })
+    .catch(err => showToast(err.message || 'Failed to update pin', 'error'));
 }
 </script>

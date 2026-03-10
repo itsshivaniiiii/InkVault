@@ -3,7 +3,6 @@
 
 @{
     ViewData["Title"] = "Dashboard";
-    ViewData["ForceDark"] = true;
 }
 
 <style>
@@ -256,6 +255,142 @@
         font-size: 0.85rem;
         color: var(--text-secondary);
     }
+
+    /* Write Streak Widget */
+    .streak-card {
+        border-radius: 14px;
+        padding: 18px 24px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        border: 1px solid rgba(102, 126, 234, 0.25);
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+        margin-bottom: 30px;
+        position: relative;
+        overflow: hidden;
+        transition: box-shadow 0.3s ease;
+    }
+
+    .streak-card.streak-active {
+        background: linear-gradient(135deg, rgba(255, 107, 107, 0.12) 0%, rgba(255, 165, 0, 0.12) 100%);
+        border-color: rgba(255, 107, 107, 0.45);
+        box-shadow: 0 4px 24px rgba(255, 107, 107, 0.12);
+    }
+
+    .streak-card.streak-building {
+        background: linear-gradient(135deg, rgba(255, 193, 7, 0.12) 0%, rgba(255, 107, 107, 0.08) 100%);
+        border-color: rgba(255, 193, 7, 0.4);
+    }
+
+    .streak-flame {
+        font-size: 2.4rem;
+        line-height: 1;
+        flex-shrink: 0;
+    }
+
+    .streak-active .streak-flame {
+        animation: flameFlicker 1.6s ease-in-out infinite alternate;
+    }
+
+    @@keyframes flameFlicker {
+        0%   { transform: scale(1)    rotate(-3deg); }
+        100% { transform: scale(1.12) rotate(3deg);  }
+    }
+
+    .streak-info { flex: 1; min-width: 0; }
+
+    .streak-count {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        white-space: nowrap;
+    }
+
+    .streak-active .streak-count {
+        background: linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .streak-sublabel {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        margin-top: 3px;
+    }
+
+    .streak-dots {
+        display: flex;
+        gap: 5px;
+        margin-top: 8px;
+        align-items: center;
+    }
+
+    .streak-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: rgba(102, 126, 234, 0.25);
+        transition: all 0.3s ease;
+    }
+
+    .streak-dot.filled {
+        background: linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%);
+        box-shadow: 0 0 5px rgba(255, 107, 107, 0.5);
+    }
+
+    .streak-best {
+        font-size: 0.82rem;
+        color: var(--text-secondary);
+        background: rgba(102, 126, 234, 0.1);
+        padding: 5px 12px;
+        border-radius: 20px;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .streak-cta {
+        background: linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%);
+        color: white !important;
+        border: none;
+        padding: 9px 18px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-decoration: none !important;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .streak-cta:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(255, 107, 107, 0.35);
+    }
+
+    .streak-card:not(.streak-active) .streak-cta {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .streak-card:not(.streak-active) .streak-cta:hover {
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.35);
+    }
+
+    [data-theme="light"] .streak-card {
+        background: #fff;
+        border-color: rgba(102, 126, 234, 0.15);
+    }
+
+    [data-theme="light"] .streak-card.streak-active {
+        background: linear-gradient(135deg, rgba(255, 107, 107, 0.06) 0%, rgba(255, 165, 0, 0.06) 100%);
+    }
+
+    @@media (max-width: 576px) {
+        .streak-best { display: none; }
+    }
 </style>
 
 @if (User?.Identity?.IsAuthenticated ?? false)
@@ -317,6 +452,62 @@
                 </div>
             </div>
         }
+
+        <!-- Write Streak Widget -->
+        @{
+            var currentStreak = ViewData["CurrentStreak"] as int? ?? 0;
+            var longestStreak = ViewData["LongestStreak"] as int? ?? 0;
+            var streakClass = currentStreak >= 3 ? "streak-active" : currentStreak > 0 ? "streak-building" : "";
+        }
+        <div class="streak-card @streakClass">
+            <div class="streak-flame">
+                @(currentStreak >= 3 ? "🔥" : currentStreak > 0 ? "✨" : "📝")
+            </div>
+            <div class="streak-info">
+                @if (currentStreak >= 3)
+                {
+                    <div class="streak-count">@currentStreak Day Streak!</div>
+                    <div class="streak-sublabel">You're on fire! Keep writing to maintain your streak.</div>
+                }
+                else if (currentStreak == 2)
+                {
+                    <div class="streak-count">@currentStreak Days In a Row</div>
+                    <div class="streak-sublabel">Just 1 more day to ignite your streak! 🌟</div>
+                }
+                else if (currentStreak == 1)
+                {
+                    <div class="streak-count">Day 1 — Getting Started</div>
+                    <div class="streak-sublabel">Write for 2 more days to build your streak!</div>
+                }
+                else
+                {
+                    <div class="streak-count">No Active Streak</div>
+                    <div class="streak-sublabel">Write 3 days in a row to start a streak!</div>
+                }
+                <div class="streak-dots">
+                    @for (int d = 1; d <= Math.Min(currentStreak, 7); d++)
+                    {
+                        <div class="streak-dot filled"></div>
+                    }
+                    @for (int d = currentStreak + 1; d <= 7; d++)
+                    {
+                        <div class="streak-dot"></div>
+                    }
+                    @if (currentStreak > 7)
+                    {
+                        <span style="font-size:0.75rem;color:var(--text-secondary);margin-left:4px;">+@(currentStreak - 7)</span>
+                    }
+                </div>
+            </div>
+            @if (longestStreak >= 3)
+            {
+                <div class="streak-best">🏆 Best: @longestStreak days</div>
+            }
+            <a href="@Url.Action("Create", "Journal")" class="streak-cta">
+                <i class="bi bi-pencil"></i>
+                @(currentStreak > 0 ? "Write Today" : "Start Writing")
+            </a>
+        </div>
 
         <!-- Stats Section -->
         <div class="row mb-5">

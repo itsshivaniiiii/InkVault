@@ -16,6 +16,13 @@ namespace InkVault.ViewModels
         public PrivacyLevel PrivacyLevel { get; set; }
         public string? DUI { get; set; }
         public string? ReferencedDUI { get; set; }
+
+        public int ReadingTimeMinutes =>
+            Math.Max(1, (int)Math.Ceiling(
+                System.Text.RegularExpressions.Regex.Replace(Content ?? string.Empty, "<[^>]+>", " ")
+                    .Split(new char[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Length / 200.0
+            ));
     }
 
     public class FriendsFeedViewModel

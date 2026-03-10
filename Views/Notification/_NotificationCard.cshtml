@@ -1,0 +1,58 @@
+@model InkVault.ViewModels.NotificationItemViewModel
+
+<div class="notif-card @(Model.IsRead ? "" : "unread")" id="notif-@Model.Id">
+
+    @* Actor avatar / icon *@
+    @if (!string.IsNullOrEmpty(Model.ActorProfilePicture))
+    {
+        <img src="@Model.ActorProfilePicture" class="notif-avatar" alt="@Model.ActorName" />
+    }
+    else if (!string.IsNullOrEmpty(Model.ActorName))
+    {
+        var initials = string.Concat(
+            Model.ActorName.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                           .Take(2)
+                           .Select(p => p[0]));
+        <div class="notif-avatar-initials" title="@Model.ActorName">@initials</div>
+    }
+    else
+    {
+        <div class="notif-icon-wrap" style="background:rgba(102,126,234,.15);">
+            <i class="bi @Model.Icon" style="color:@Model.IconColor;"></i>
+        </div>
+    }
+
+    <div class="notif-body">
+        <p class="notif-message">
+            <i class="bi @Model.Icon me-1" style="color:@Model.IconColor;"></i>
+            @Model.Message
+        </p>
+        <span class="notif-time">
+            <i class="bi bi-clock me-1"></i>
+            @{
+                var diff = DateTime.UtcNow - Model.CreatedAt;
+                string timeAgo = diff.TotalMinutes < 1  ? "just now"
+                               : diff.TotalMinutes < 60 ? $"{(int)diff.TotalMinutes}m ago"
+                               : diff.TotalHours   < 24 ? $"{(int)diff.TotalHours}h ago"
+                               : diff.TotalDays    < 7  ? $"{(int)diff.TotalDays}d ago"
+                               : Model.CreatedAt.ToString("MMM dd, yyyy");
+            }
+            @timeAgo
+        </span>
+    </div>
+
+    <div class="notif-actions">
+        @if (!string.IsNullOrEmpty(Model.ResourceUrl))
+        {
+            <a href="@Model.ResourceUrl" class="btn-go-notif">
+                <i class="bi bi-arrow-right"></i> View
+            </a>
+        }
+        @if (!Model.IsRead)
+        {
+            <button class="btn-read-notif" onclick="markRead(@Model.Id, this)" title="Mark as read">
+                <i class="bi bi-check2"></i>
+            </button>
+        }
+    </div>
+</div>

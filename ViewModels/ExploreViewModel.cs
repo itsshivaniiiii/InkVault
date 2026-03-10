@@ -20,6 +20,13 @@ namespace InkVault.ViewModels
         public bool IsAnonymous { get; set; } = false;
         public string? DUI { get; set; }
         public string? ReferencedDUI { get; set; }
+
+        public int ReadingTimeMinutes =>
+            Math.Max(1, (int)Math.Ceiling(
+                System.Text.RegularExpressions.Regex.Replace(Content ?? string.Empty, "<[^>]+>", " ")
+                    .Split(new char[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Length / 200.0
+            ));
     }
 
     public class ExploreListViewModel

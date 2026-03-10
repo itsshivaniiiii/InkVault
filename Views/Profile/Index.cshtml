@@ -348,6 +348,107 @@
         text-decoration: none;
     }
 
+    .pinned-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 18px;
+    }
+
+    .pinned-card {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+        border: 1px solid rgba(102, 126, 234, 0.25);
+        border-radius: 10px;
+        padding: 18px;
+        transition: all 0.3s ease;
+    }
+
+    .pinned-card:hover {
+        border-color: rgba(102, 126, 234, 0.5);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.15);
+        transform: translateY(-3px);
+    }
+
+    .pinned-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .pinned-card-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0;
+        flex: 1;
+    }
+
+    .unpin-btn {
+        background: none;
+        border: none;
+        color: rgba(255, 107, 107, 0.7);
+        cursor: pointer;
+        padding: 2px 6px;
+        font-size: 1.1rem;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+        flex-shrink: 0;
+    }
+
+    .unpin-btn:hover {
+        color: #ff6b6b;
+        background: rgba(255, 107, 107, 0.1);
+    }
+
+    .pinned-topic {
+        display: inline-block;
+        font-size: 0.78rem;
+        color: #667eea;
+        background: rgba(102, 126, 234, 0.1);
+        border-radius: 10px;
+        padding: 2px 8px;
+        margin-bottom: 10px;
+    }
+
+    .pinned-preview {
+        font-size: 0.88rem;
+        color: var(--text-secondary);
+        line-height: 1.5;
+        margin-bottom: 12px;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .pinned-card-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+    }
+
+    .pinned-empty {
+        text-align: center;
+        padding: 25px;
+        background: rgba(102, 126, 234, 0.05);
+        border-radius: 8px;
+        border: 1px dashed rgba(102, 126, 234, 0.3);
+    }
+
+    .pin-counter {
+        font-size: 0.88rem;
+        color: var(--text-secondary);
+        margin-bottom: 18px;
+    }
+
+    [data-theme="light"] .pinned-card {
+        background: #ffffff;
+        border-color: rgba(102, 126, 234, 0.15);
+    }
+
 </style>
 
 <div class="profile-container">
@@ -412,10 +513,62 @@
         </div>
     </div>
 
+    <!-- Pinned Journals -->
+    @{
+        var pinCount = Model?.PinnedJournals?.Count ?? 0;
+    }
+    <div class="section-card" id="pinnedJournalsSection">
+        <h3 class="section-title">
+            <i class="bi bi-pin-fill" style="color: #667eea;"></i> Pinned Journals
+        </h3>
+        <p class="pin-counter">
+            <span id="pinCountDisplay">@pinCount</span>/3 pinned &mdash;
+            Open any journal and click <strong>Pin to Profile</strong> to showcase it here.
+            <a href="@Url.Action("MyJournals", "Journal")" style="color: #667eea;">My Journals →</a>
+        </p>
+
+        @if (Model?.PinnedJournals != null && Model.PinnedJournals.Any())
+        {
+            <div class="pinned-grid" id="pinnedGrid">
+                @foreach (var journal in Model.PinnedJournals)
+                {
+                    <div class="pinned-card" id="pinned-card-@journal.JournalId">
+                        <div class="pinned-card-header">
+                            <h4 class="pinned-card-title">
+                                <a href="@Url.Action("View", "Journal", new { id = journal.JournalId })" style="color: inherit; text-decoration: none;">
+                                    @journal.Title
+                                </a>
+                            </h4>
+                            <button class="unpin-btn" title="Unpin from profile" onclick="unpinJournal(@journal.JournalId)">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                        </div>
+                        @if (!string.IsNullOrEmpty(journal.Topic))
+                        {
+                            <span class="pinned-topic"><i class="bi bi-tag"></i> @journal.Topic</span>
+                        }
+                        <p class="pinned-preview">@journal.Content</p>
+                        <div class="pinned-card-footer">
+                            <span><i class="bi bi-eye"></i> @journal.ViewCount</span>
+                            <time datetime="@journal.CreatedAt.ToString("o")"></time>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="pinned-empty" id="pinnedEmpty">
+                <i class="bi bi-pin" style="font-size: 2rem; color: rgba(102, 126, 234, 0.4); display: block; margin-bottom: 10px;"></i>
+                <p style="color: var(--text-secondary); margin: 0;">No pinned journals yet.</p>
+                <small style="color: var(--text-secondary);">Open a journal and click <strong>Pin to Profile</strong> to pin it here.</small>
+            </div>
+        }
+    </div>
+
     <!-- Personal Information -->
     <form method="post" action="@Url.Action("UpdateProfile", "Profile")" enctype="multipart/form-data">
         @Html.AntiForgeryToken()
-
         <div class="section-card">
             <h3 class="section-title">
                 <i class="bi bi-person-circle"></i> Personal Information
@@ -486,6 +639,21 @@
 
         <a href="@Url.Action("Settings", "Notification")" class="btn-primary">
             <i class="bi bi-gear"></i> Notification Settings
+        </a>
+    </div>
+
+    <!-- Privacy & Safety -->
+    <div class="section-card">
+        <h3 class="section-title">
+            <i class="bi bi-shield-lock"></i> Privacy &amp; Safety
+        </h3>
+
+        <p style="color: var(--text-secondary); margin-bottom: 20px;">
+            Manage users you have blocked. Blocked users cannot view your profile or journals.
+        </p>
+
+        <a href="@Url.Action("BlockedUsers", "Profile")" class="btn-primary" style="background: rgba(244, 67, 54, 0.15); color: #f44336; border: 1px solid rgba(244, 67, 54, 0.3);">
+            <i class="bi bi-ban"></i> Manage Blocked Users
         </a>
     </div>
 
@@ -579,5 +747,37 @@ if (bioField) {
     // Load saved theme from localStorage
     const savedTheme = localStorage.getItem('theme') || 'dark';
     document.documentElement.setAttribute('data-theme', savedTheme);
+
+    // Convert <time> elements in pinned cards to local date
+    document.querySelectorAll('time[datetime]').forEach(function (el) {
+        var utc = new Date(el.getAttribute('datetime'));
+        if (!isNaN(utc)) el.textContent = utc.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    });
+
+    function unpinJournal(journalId) {
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+        fetch('@Url.Action("TogglePin", "Profile")', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'RequestVerificationToken': token || ''
+            },
+            body: `journalId=${journalId}`
+        })
+        .then(r => { if (!r.ok) return r.json().then(d => { throw new Error(d.message); }); return r.json(); })
+        .then(() => {
+            const card = document.getElementById(`pinned-card-${journalId}`);
+            if (card) card.remove();
+            const counter = document.getElementById('pinCountDisplay');
+            if (counter) counter.textContent = Math.max(0, parseInt(counter.textContent) - 1);
+            const grid = document.getElementById('pinnedGrid');
+            if (grid && grid.children.length === 0) {
+                grid.style.display = 'none';
+                grid.insertAdjacentHTML('afterend', `<div class="pinned-empty" id="pinnedEmpty"><i class="bi bi-pin" style="font-size:2rem;color:rgba(102,126,234,0.4);display:block;margin-bottom:10px;"></i><p style="color:var(--text-secondary);margin:0;">No pinned journals yet.</p><small style="color:var(--text-secondary);">Open a journal and click <strong>Pin to Profile</strong> to pin it here.</small></div>`);
+            }
+            showToast('Journal unpinned from profile', 'success');
+        })
+        .catch(err => showToast(err.message || 'Failed to unpin', 'error'));
+    }
 </script>
 

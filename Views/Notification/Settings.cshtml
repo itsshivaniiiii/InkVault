@@ -286,6 +286,26 @@
                         </label>
                     </div>
                 </div>
+
+                <div class="setting-item">
+                    <input type="checkbox" id="EmailOnJournalLiked" name="EmailOnJournalLiked" value="true"
+                           @(Model.EmailOnJournalLiked ? "checked" : "") />
+                    <div class="setting-label">
+                        <label for="EmailOnJournalLiked">
+                            When someone likes your journal
+                        </label>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <input type="checkbox" id="EmailOnJournalCommented" name="EmailOnJournalCommented" value="true"
+                           @(Model.EmailOnJournalCommented ? "checked" : "") />
+                    <div class="setting-label">
+                        <label for="EmailOnJournalCommented">
+                            When someone comments on your journal
+                        </label>
+                    </div>
+                </div>
             </div>
         </div>
 

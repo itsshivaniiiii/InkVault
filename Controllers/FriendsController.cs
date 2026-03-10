@@ -71,8 +71,16 @@ namespace InkVault.Controllers
             if (!string.IsNullOrWhiteSpace(search))
             {
                 var searchLower = search.ToLower();
+
+                // Exclude users who have blocked me or whom I have blocked
+                var blockedIds = await _context.BlockedUsers
+                    .Where(b => b.BlockerId == currentUser.Id || b.BlockedId == currentUser.Id)
+                    .Select(b => b.BlockerId == currentUser.Id ? b.BlockedId : b.BlockerId)
+                    .ToListAsync();
+
                 var users = await _userManager.Users
                     .Where(u => u.Id != currentUser.Id &&
+                               !blockedIds.Contains(u.Id) &&
                                (u.FirstName.ToLower().Contains(searchLower) ||
                                 u.LastName.ToLower().Contains(searchLower) ||
                                 u.UserName!.ToLower().Contains(searchLower) ||
@@ -225,6 +233,7 @@ namespace InkVault.Controllers
 
             // Send email notification to receiver
             await _notificationService.SendFriendRequestReceivedEmailAsync(friendRequest);
+            await _notificationService.NotifyFriendRequestReceivedInAppAsync(friendRequest);
 
             return Ok(new { success = true, message = "Friend request sent" });
         }
@@ -274,6 +283,7 @@ namespace InkVault.Controllers
 
                 // Send email notification to the sender about acceptance
                 await _notificationService.SendFriendRequestAcceptedEmailAsync(friendRequest);
+                await _notificationService.NotifyFriendRequestAcceptedInAppAsync(friendRequest);
 
                 return Ok(new { success = true, message = "Friend request accepted" });
             }
@@ -311,6 +321,7 @@ namespace InkVault.Controllers
 
                 // Send email notification to the sender about decline
                 await _notificationService.SendFriendRequestDeniedEmailAsync(friendRequest);
+                await _notificationService.NotifyFriendRequestDeclinedInAppAsync(friendRequest);
 
                 return Ok(new { success = true, message = "Friend request declined" });
             }
@@ -335,6 +346,8 @@ namespace InkVault.Controllers
             if (friend == null)
                 return NotFound(new { success = false, message = "Friend not found" });
 
+            var removedUserId = friend.FriendUserId; // capture before removal
+
             // Remove bidirectional friendship
             var reverseFriend = await _context.Friends
                 .FirstOrDefaultAsync(f => f.UserId == friend.FriendUserId && f.FriendUserId == currentUser.Id);
@@ -344,6 +357,8 @@ namespace InkVault.Controllers
                 _context.Friends.Remove(reverseFriend);
 
             await _context.SaveChangesAsync();
+
+            await _notificationService.NotifyFriendRemovedAsync(currentUser.Id, removedUserId);
 
             return Ok(new { success = true, message = "Friend removed" });
         }
@@ -367,8 +382,12 @@ namespace InkVault.Controllers
                 if (friendRequest.Status != FriendRequestStatus.Pending)
                     return BadRequest(new { success = false, message = "Can only withdraw pending requests" });
 
+                var receiverId = friendRequest.ReceiverId; // capture before removal
+
                 _context.FriendRequests.Remove(friendRequest);
                 await _context.SaveChangesAsync();
+
+                await _notificationService.NotifyFriendRequestWithdrawnInAppAsync(currentUser.Id, receiverId);
 
                 return Ok(new { success = true, message = "Friend request withdrawn" });
             }
@@ -392,9 +411,16 @@ namespace InkVault.Controllers
 
             var searchLower = query.ToLower();
 
+            // Exclude users who have blocked me or whom I have blocked
+            var blockedIds = await _context.BlockedUsers
+                .Where(b => b.BlockerId == currentUser.Id || b.BlockedId == currentUser.Id)
+                .Select(b => b.BlockerId == currentUser.Id ? b.BlockedId : b.BlockerId)
+                .ToListAsync();
+
             // Search by name or username
             var users = await _userManager.Users
                 .Where(u => u.Id != currentUser.Id &&
+                           !blockedIds.Contains(u.Id) &&
                            (u.FirstName.ToLower().Contains(searchLower) ||
                             u.LastName.ToLower().Contains(searchLower) ||
                             u.UserName!.ToLower().Contains(searchLower)))

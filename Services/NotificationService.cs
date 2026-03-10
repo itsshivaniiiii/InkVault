@@ -609,5 +609,302 @@ namespace InkVault.Services
                 _logger.LogError($"Error sending full text request email: {ex.Message}");
             }
         }
+
+        // ===================================================
+        // EMAIL NOTIFICATIONS — Likes & Comments
+        // ===================================================
+
+        public async Task SendJournalLikedEmailAsync(string actorId, Journal journal)
+        {
+            try
+            {
+                if (journal.UserId == actorId) return; // don't notify on self-like
+
+                var preferences = await GetOrCreateNotificationPreferencesAsync(journal.UserId);
+                if (!preferences.EmailOnJournalLiked) return;
+
+                var actor  = await _context.Users.FindAsync(actorId);
+                var owner  = await _context.Users.FindAsync(journal.UserId);
+                if (actor == null || owner == null) return;
+
+                var likedAt = ToIST(DateTime.UtcNow).ToString("MMMM dd, yyyy 'at' hh:mm tt 'IST'");
+                var subject = $"{actor.FirstName} {actor.LastName} liked your journal \"{journal.Title}\"";
+
+                var body = $@"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='UTF-8'>
+    <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; }}
+        .wrapper {{ background: #f5f5f5; padding: 40px 20px; }}
+        .container {{ max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 10px 40px rgba(233,30,99,.15); overflow: hidden; }}
+        .header {{ background: linear-gradient(135deg, #e91e63 0%, #ad1457 100%); padding: 40px 30px; text-align: center; color: white; }}
+        .header h1 {{ font-size: 26px; font-weight: 700; margin-bottom: 8px; }}
+        .content {{ padding: 35px 30px; }}
+        .card {{ background: #fce4ec; border-left: 4px solid #e91e63; padding: 20px; border-radius: 6px; margin: 20px 0; }}
+        .card .name {{ font-size: 18px; font-weight: 700; color: #333; }}
+        .card .handle {{ font-size: 14px; color: #999; margin-top: 4px; }}
+        .info-row {{ display: flex; gap: 12px; margin: 8px 0; font-size: 14px; color: #555; }}
+        .footer {{ background: #f8f9fa; padding: 18px; text-align: center; font-size: 12px; color: #999; }}
+    </style>
+</head>
+<body>
+<div class='wrapper'><div class='container'>
+    <div class='header'>
+        <h1>&#10084; Journal Liked</h1>
+        <p>Someone loved your writing</p>
+    </div>
+    <div class='content'>
+        <p>Hi {owner.FirstName},</p>
+        <div class='card'>
+            <div class='name'>{actor.FirstName} {actor.LastName}</div>
+            <div class='handle'>@{actor.UserName}</div>
+        </div>
+        <div class='info-row'><strong>Journal:</strong>&nbsp;&quot;{journal.Title}&quot;</div>
+        <div class='info-row'><strong>Date:</strong>&nbsp;{likedAt}</div>
+        <p style='margin-top:20px;color:#555;'>Log in to InkVault to see all your likes.</p>
+    </div>
+    <div class='footer'>&copy; 2025 InkVault. All rights reserved.</div>
+</div></div>
+</body></html>";
+
+                await _emailService.SendEmailAsync(owner.Email, subject, body);
+                _logger.LogInformation($"Journal liked email sent to {owner.Email}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error sending journal liked email: {ex.Message}");
+            }
+        }
+
+        public async Task SendJournalCommentedEmailAsync(string actorId, Journal journal, string commentContent)
+        {
+            try
+            {
+                if (journal.UserId == actorId) return; // don't notify on self-comment
+
+                var preferences = await GetOrCreateNotificationPreferencesAsync(journal.UserId);
+                if (!preferences.EmailOnJournalCommented) return;
+
+                var actor = await _context.Users.FindAsync(actorId);
+                var owner = await _context.Users.FindAsync(journal.UserId);
+                if (actor == null || owner == null) return;
+
+                var commentedAt = ToIST(DateTime.UtcNow).ToString("MMMM dd, yyyy 'at' hh:mm tt 'IST'");
+                var preview     = commentContent.Length > 200 ? commentContent[..200] + "…" : commentContent;
+                var subject     = $"{actor.FirstName} {actor.LastName} commented on \"{journal.Title}\"";
+
+                var body = $@"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='UTF-8'>
+    <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; }}
+        .wrapper {{ background: #f5f5f5; padding: 40px 20px; }}
+        .container {{ max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 10px 40px rgba(102,126,234,.15); overflow: hidden; }}
+        .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center; color: white; }}
+        .header h1 {{ font-size: 26px; font-weight: 700; margin-bottom: 8px; }}
+        .content {{ padding: 35px 30px; }}
+        .user-card {{ background: #f3f0ff; border-left: 4px solid #667eea; padding: 18px; border-radius: 6px; margin: 20px 0; }}
+        .user-card .name {{ font-size: 18px; font-weight: 700; color: #333; }}
+        .user-card .handle {{ font-size: 14px; color: #999; margin-top: 4px; }}
+        .comment-box {{ background: #f8f9ff; border: 1px solid rgba(102,126,234,.2); border-radius: 8px; padding: 18px; margin: 20px 0; font-style: italic; color: #444; line-height: 1.7; }}
+        .info-row {{ display: flex; gap: 12px; margin: 8px 0; font-size: 14px; color: #555; }}
+        .footer {{ background: #f8f9fa; padding: 18px; text-align: center; font-size: 12px; color: #999; }}
+    </style>
+</head>
+<body>
+<div class='wrapper'><div class='container'>
+    <div class='header'>
+        <h1>&#128172; New Comment</h1>
+        <p>Someone replied to your journal</p>
+    </div>
+    <div class='content'>
+        <p>Hi {owner.FirstName},</p>
+        <div class='user-card'>
+            <div class='name'>{actor.FirstName} {actor.LastName}</div>
+            <div class='handle'>@{actor.UserName}</div>
+        </div>
+        <div class='info-row'><strong>Journal:</strong>&nbsp;&quot;{journal.Title}&quot;</div>
+        <div class='info-row'><strong>Date:</strong>&nbsp;{commentedAt}</div>
+        <div class='comment-box'>&ldquo;{preview}&rdquo;</div>
+        <p style='color:#555;'>Log in to InkVault to read the full comment and reply.</p>
+    </div>
+    <div class='footer'>&copy; 2025 InkVault. All rights reserved.</div>
+</div></div>
+</body></html>";
+
+                await _emailService.SendEmailAsync(owner.Email, subject, body);
+                _logger.LogInformation($"Journal commented email sent to {owner.Email}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error sending journal commented email: {ex.Message}");
+            }
+        }
+
+        // ===================================================
+        // IN-APP NOTIFICATIONS  (no email sent)
+        // ===================================================
+
+        public async Task CreateInAppNotificationAsync(
+            string recipientId,
+            string? actorId,
+            NotificationType type,
+            string message,
+            string? resourceUrl = null,
+            int? journalId = null,
+            string? journalTitle = null)
+        {
+            if (recipientId == actorId) return; // never notify yourself
+
+            _context.AppNotifications.Add(new AppNotification
+            {
+                RecipientId  = recipientId,
+                ActorId      = actorId,
+                Type         = type,
+                Message      = message,
+                ResourceUrl  = resourceUrl,
+                JournalId    = journalId,
+                JournalTitle = journalTitle,
+                IsRead       = false,
+                CreatedAt    = DateTime.UtcNow
+            });
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task NotifyLikeAsync(string actorId, Journal journal)
+        {
+            if (journal.UserId == actorId) return;
+            var actor = await _context.Users.FindAsync(actorId);
+            if (actor == null) return;
+            await CreateInAppNotificationAsync(
+                journal.UserId, actorId, NotificationType.LikeReceived,
+                $"{actor.FirstName} {actor.LastName} liked your journal \"{journal.Title}\"",
+                $"/Journal/View/{journal.JournalId}", journal.JournalId, journal.Title);
+        }
+
+        public async Task NotifyUnlikeAsync(string actorId, Journal journal)
+        {
+            if (journal.UserId == actorId) return;
+            var actor = await _context.Users.FindAsync(actorId);
+            if (actor == null) return;
+            await CreateInAppNotificationAsync(
+                journal.UserId, actorId, NotificationType.LikeRemoved,
+                $"{actor.FirstName} {actor.LastName} removed their like from \"{journal.Title}\"",
+                $"/Journal/View/{journal.JournalId}", journal.JournalId, journal.Title);
+        }
+
+        public async Task NotifyCommentAsync(string actorId, Journal journal, string commentContent)
+        {
+            if (journal.UserId == actorId) return;
+            var actor = await _context.Users.FindAsync(actorId);
+            if (actor == null) return;
+            var preview = commentContent.Length > 80 ? commentContent[..80] + "\u2026" : commentContent;
+            await CreateInAppNotificationAsync(
+                journal.UserId, actorId, NotificationType.CommentReceived,
+                $"{actor.FirstName} {actor.LastName} commented on \"{journal.Title}\": \"{preview}\"",
+                $"/Journal/View/{journal.JournalId}", journal.JournalId, journal.Title);
+        }
+
+        public async Task NotifyCommentDeletedAsync(string actorId, Journal journal)
+        {
+            if (journal.UserId == actorId) return;
+            var actor = await _context.Users.FindAsync(actorId);
+            if (actor == null) return;
+            await CreateInAppNotificationAsync(
+                journal.UserId, actorId, NotificationType.CommentDeleted,
+                $"{actor.FirstName} {actor.LastName} deleted their comment on \"{journal.Title}\"",
+                $"/Journal/View/{journal.JournalId}", journal.JournalId, journal.Title);
+        }
+
+        public async Task NotifyFriendRequestReceivedInAppAsync(FriendRequest request)
+        {
+            var sender = await _context.Users.FindAsync(request.SenderId);
+            if (sender == null) return;
+            await CreateInAppNotificationAsync(
+                request.ReceiverId, request.SenderId, NotificationType.FriendRequestReceived,
+                $"{sender.FirstName} {sender.LastName} sent you a friend request",
+                $"/Profile/ViewPublic/{request.SenderId}");
+        }
+
+        public async Task NotifyFriendRequestAcceptedInAppAsync(FriendRequest request)
+        {
+            var receiver = await _context.Users.FindAsync(request.ReceiverId);
+            if (receiver == null) return;
+            await CreateInAppNotificationAsync(
+                request.SenderId, request.ReceiverId, NotificationType.FriendRequestAccepted,
+                $"{receiver.FirstName} {receiver.LastName} accepted your friend request",
+                $"/Profile/ViewPublic/{request.ReceiverId}");
+        }
+
+        public async Task NotifyFriendRequestDeclinedInAppAsync(FriendRequest request)
+        {
+            var receiver = await _context.Users.FindAsync(request.ReceiverId);
+            if (receiver == null) return;
+            await CreateInAppNotificationAsync(
+                request.SenderId, request.ReceiverId, NotificationType.FriendRequestDeclined,
+                $"{receiver.FirstName} {receiver.LastName} declined your friend request",
+                $"/Profile/ViewPublic/{request.ReceiverId}");
+        }
+
+        public async Task NotifyFriendRequestWithdrawnInAppAsync(string senderId, string receiverId)
+        {
+            var sender = await _context.Users.FindAsync(senderId);
+            if (sender == null) return;
+            await CreateInAppNotificationAsync(
+                receiverId, senderId, NotificationType.FriendRequestWithdrawn,
+                $"{sender.FirstName} {sender.LastName} withdrew their friend request",
+                $"/Profile/ViewPublic/{senderId}");
+        }
+
+        public async Task NotifyFriendRemovedAsync(string actorId, string recipientId)
+        {
+            var actor = await _context.Users.FindAsync(actorId);
+            if (actor == null) return;
+            await CreateInAppNotificationAsync(
+                recipientId, actorId, NotificationType.FriendRemoved,
+                $"{actor.FirstName} {actor.LastName} removed you from their friends",
+                $"/Profile/ViewPublic/{actorId}");
+        }
+
+        public async Task NotifyJournalReferencedAsync(string actorId, Journal referencedJournal, Journal newJournal)
+        {
+            if (referencedJournal.UserId == actorId) return;
+            var actor = await _context.Users.FindAsync(actorId);
+            if (actor == null) return;
+            var actorName = newJournal.IsAnonymous ? "Someone" : $"{actor.FirstName} {actor.LastName}";
+            await CreateInAppNotificationAsync(
+                referencedJournal.UserId,
+                newJournal.IsAnonymous ? null : actorId,
+                NotificationType.JournalReferenced,
+                $"{actorName} referenced your journal \"{referencedJournal.Title}\" in a new journal \"{newJournal.Title}\"",
+                $"/Journal/View/{newJournal.JournalId}",
+                referencedJournal.JournalId, referencedJournal.Title);
+        }
+
+        public async Task NotifyJournalPublishedInAppAsync(Journal journal, IEnumerable<string> friendIds)
+        {
+            if (journal.IsAnonymous) return;
+            var author = await _context.Users.FindAsync(journal.UserId);
+            if (author == null) return;
+            foreach (var friendId in friendIds)
+            {
+                await CreateInAppNotificationAsync(
+                    friendId, journal.UserId, NotificationType.JournalPublished,
+                    $"{author.FirstName} {author.LastName} published a new journal: \"{journal.Title}\"",
+                    $"/Journal/View/{journal.JournalId}", journal.JournalId, journal.Title);
+            }
+        }
+
+        public async Task NotifyFullTextRequestedInAppAsync(Journal journal, ApplicationUser requester)
+        {
+            await CreateInAppNotificationAsync(
+                journal.UserId, requester.Id, NotificationType.FullTextRequested,
+                $"{requester.FirstName} {requester.LastName} requested the full text of your journal \"{journal.Title}\"",
+                $"/Journal/View/{journal.JournalId}", journal.JournalId, journal.Title);
+        }
     }
 }

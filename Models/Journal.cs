@@ -68,6 +68,8 @@ namespace InkVault.Models
         [StringLength(20)]
         public string? ReferencedDUI { get; set; }
 
+        public bool IsPinned { get; set; } = false;
+
         // Navigation properties
         public ICollection<JournalView> Views { get; set; } = new List<JournalView>();
         public ICollection<Like> Likes { get; set; } = new List<Like>();

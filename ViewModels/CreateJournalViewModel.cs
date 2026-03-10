@@ -124,5 +124,11 @@ namespace InkVault.ViewModels
         public bool IsAnonymous { get; set; } = false;
         public string? DUI { get; set; }
         public string? ReferencedDUI { get; set; }
+        public int LikeCount { get; set; }
+        public int CommentCount { get; set; }
+        public bool IsPinned { get; set; }
+
+        // Set by the controller using the full (untruncated) content
+        public int ReadingTimeMinutes { get; set; } = 1;
     }
 }

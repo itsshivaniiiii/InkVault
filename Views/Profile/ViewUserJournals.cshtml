@@ -441,6 +441,10 @@
                                 <i class="bi bi-eye"></i>
                                 <span>@journal.ViewCount @(journal.ViewCount == 1 ? "view" : "views")</span>
                             </div>
+                            <div class="meta-item">
+                                <i class="bi bi-clock"></i>
+                                <span>@journal.ReadingTimeMinutes min read</span>
+                            </div>
                             @if (!string.IsNullOrEmpty(journal.Topic))
                             {
                                 <span class="topic-badge">#@journal.Topic</span>

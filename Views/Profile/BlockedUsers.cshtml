@@ -1,0 +1,255 @@
+@model IEnumerable<InkVault.ViewModels.BlockedUserViewModel>
+
+@{
+    ViewData["Title"] = "Blocked Users";
+}
+
+<style>
+    .blocked-container {
+        max-width: 700px;
+        margin: 0 auto;
+        padding: 40px 20px;
+        animation: fadeInUp 0.8s ease;
+    }
+
+    .page-header {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 35px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid rgba(244, 67, 54, 0.2);
+    }
+
+    .page-header h1 {
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin: 0;
+        background: linear-gradient(135deg, #f44336 0%, #e91e63 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .back-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        background: rgba(102, 126, 234, 0.2);
+        color: #667eea;
+        border: 1px solid rgba(102, 126, 234, 0.3);
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        margin-bottom: 25px;
+    }
+
+    .back-btn:hover {
+        background: rgba(102, 126, 234, 0.3);
+        color: #667eea;
+        text-decoration: none;
+    }
+
+    .info-banner {
+        background: rgba(244, 67, 54, 0.08);
+        border: 1px solid rgba(244, 67, 54, 0.2);
+        border-radius: 10px;
+        padding: 15px 20px;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        margin-bottom: 30px;
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+    }
+
+    .info-banner i {
+        color: #f44336;
+        font-size: 1.1rem;
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+
+    .blocked-list {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .blocked-card {
+        background: linear-gradient(135deg, rgba(26, 31, 46, 0.8) 0%, rgba(26, 31, 46, 0.6) 100%);
+        border: 1px solid rgba(244, 67, 54, 0.15);
+        border-radius: 12px;
+        padding: 18px 20px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        transition: all 0.3s ease;
+    }
+
+    .blocked-card:hover {
+        border-color: rgba(244, 67, 54, 0.3);
+        box-shadow: 0 8px 20px rgba(244, 67, 54, 0.1);
+    }
+
+    .blocked-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.1rem;
+        font-weight: 700;
+        flex-shrink: 0;
+        overflow: hidden;
+    }
+
+    .blocked-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 50%;
+    }
+
+    .blocked-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .blocked-name {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0 0 4px 0;
+    }
+
+    .blocked-date {
+        font-size: 0.82rem;
+        color: var(--text-secondary);
+    }
+
+    .unblock-btn {
+        background: rgba(102, 126, 234, 0.15);
+        color: #667eea;
+        padding: 8px 16px;
+        border: 1px solid rgba(102, 126, 234, 0.3);
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.85rem;
+        flex-shrink: 0;
+    }
+
+    .unblock-btn:hover {
+        background: rgba(102, 126, 234, 0.28);
+        color: #667eea;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 70px 30px;
+        background: rgba(102, 126, 234, 0.05);
+        border: 1px dashed rgba(102, 126, 234, 0.2);
+        border-radius: 12px;
+    }
+
+    .empty-state i {
+        font-size: 3.5rem;
+        color: var(--text-secondary);
+        opacity: 0.4;
+        margin-bottom: 18px;
+    }
+
+    .empty-state h3 {
+        color: var(--text-primary);
+        font-size: 1.3rem;
+        margin-bottom: 8px;
+    }
+
+    .empty-state p {
+        color: var(--text-secondary);
+        margin: 0;
+        font-size: 0.95rem;
+    }
+
+    [data-theme="light"] .blocked-card {
+        background: #ffffff;
+        border-color: rgba(244, 67, 54, 0.12);
+    }
+
+    @@keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+
+<div class="blocked-container">
+    <a href="@Url.Action("Index", "Profile")" class="back-btn">
+        <i class="bi bi-arrow-left"></i> Back to Profile
+    </a>
+
+    <div class="page-header">
+        <i class="bi bi-ban" style="font-size: 2rem; color: #f44336;"></i>
+        <h1>Blocked Users</h1>
+    </div>
+
+    <div class="info-banner">
+        <i class="bi bi-info-circle-fill"></i>
+        <span>Blocked users cannot view your profile or journals, and they won't appear in your friend search or feed. You can unblock them at any time.</span>
+    </div>
+
+    @if (Model.Any())
+    {
+        <div class="blocked-list">
+            @foreach (var blocked in Model)
+            {
+                <div class="blocked-card">
+                    <div class="blocked-avatar">
+                        @if (!string.IsNullOrEmpty(blocked.ProfilePicturePath))
+                        {
+                            <img src="@blocked.ProfilePicturePath" alt="@blocked.FirstName @blocked.LastName" />
+                        }
+                        else
+                        {
+                            <span>@blocked.FirstName.FirstOrDefault()@blocked.LastName.FirstOrDefault()</span>
+                        }
+                    </div>
+
+                    <div class="blocked-info">
+                        <p class="blocked-name">@blocked.FirstName @blocked.LastName</p>
+                        <p class="blocked-date">
+                            <i class="bi bi-ban"></i>
+                            Blocked <time datetime="@blocked.BlockedAt.ToString("o")" data-format="relative"></time>
+                        </p>
+                    </div>
+
+                    <form id="unblockForm-@blocked.BlockedUserId" method="post" asp-action="UnblockUser" asp-controller="Profile">
+                        <input type="hidden" name="userId" value="@blocked.BlockedUserId" />
+                        @Html.AntiForgeryToken()
+                        <button type="button" class="unblock-btn"
+                            onclick="showConfirm('Unblock @(blocked.FirstName) @(blocked.LastName)? They will be able to view your profile again.', function() { document.getElementById('unblockForm-@blocked.BlockedUserId').submit(); }, { title: 'Unblock User', confirmText: 'Unblock' })">
+                            <i class="bi bi-slash-circle"></i> Unblock
+                        </button>
+                    </form>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            <i class="bi bi-shield-check"></i>
+            <h3>No Blocked Users</h3>
+            <p>You haven't blocked anyone yet. Block users from their profile page.</p>
+        </div>
+    }
+</div>

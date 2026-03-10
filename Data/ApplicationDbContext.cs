@@ -22,6 +22,8 @@ namespace InkVault.Data
         public DbSet<Comment> Comments { get; set; }
         public DbSet<NotificationPreference> NotificationPreferences { get; set; }
         public DbSet<FullTextRequest> FullTextRequests { get; set; }
+        public DbSet<BlockedUser> BlockedUsers { get; set; }
+        public DbSet<AppNotification> AppNotifications { get; set; }
 
         // Data Protection Keys for antiforgery token encryption
         public DbSet<Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.DataProtectionKey> DataProtectionKeys { get; set; }
@@ -91,6 +93,37 @@ namespace InkVault.Data
             modelBuilder.Entity<FullTextRequest>()
                 .HasIndex(ftr => new { ftr.JournalId, ftr.RequesterId })
                 .IsUnique();
+
+            // Configure BlockedUser relationships
+            modelBuilder.Entity<BlockedUser>()
+                .HasOne(b => b.Blocker)
+                .WithMany(u => u.BlockedUsers)
+                .HasForeignKey(b => b.BlockerId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<BlockedUser>()
+                .HasOne(b => b.Blocked)
+                .WithMany(u => u.BlockedByUsers)
+                .HasForeignKey(b => b.BlockedId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // Prevent duplicate blocks from the same user
+            modelBuilder.Entity<BlockedUser>()
+                .HasIndex(b => new { b.BlockerId, b.BlockedId })
+                .IsUnique();
+
+            // AppNotification relationships
+            modelBuilder.Entity<AppNotification>()
+                .HasOne(n => n.Recipient)
+                .WithMany(u => u.AppNotifications)
+                .HasForeignKey(n => n.RecipientId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<AppNotification>()
+                .HasOne(n => n.Actor)
+                .WithMany()
+                .HasForeignKey(n => n.ActorId)
+                .OnDelete(DeleteBehavior.NoAction);
         }
     }
 }

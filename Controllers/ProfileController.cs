@@ -46,6 +46,35 @@ namespace InkVault.Controllers
                 ThemePreference = user.ThemePreference
             };
 
+            var pinnedRaw = await _context.Journals
+                .Where(j => j.UserId == user.Id && j.IsPinned && j.Status == JournalStatus.Published)
+                .OrderByDescending(j => j.CreatedAt)
+                .Select(j => new { j.JournalId, j.Title, j.Content, j.Abstract, j.Topic, j.Tags, j.CreatedAt, j.ViewCount, j.PrivacyLevel, j.IsAnonymous, j.DUI, j.ReferencedDUI })
+                .ToListAsync();
+
+            model.PinnedJournals = pinnedRaw.Select(j =>
+            {
+                var rawText = !string.IsNullOrEmpty(j.Content) ? j.Content : j.Abstract ?? string.Empty;
+                var stripped = System.Text.RegularExpressions.Regex.Replace(rawText, "<[^>]+>", " ").Trim();
+                var preview = stripped.Length > 150 ? stripped.Substring(0, 150) + "..." : stripped;
+                List<string>? tags = null;
+                if (!string.IsNullOrEmpty(j.Tags)) { try { tags = System.Text.Json.JsonSerializer.Deserialize<List<string>>(j.Tags); } catch { } }
+                return new UserJournalViewModel
+                {
+                    JournalId = j.JournalId,
+                    Title = j.Title,
+                    Content = preview,
+                    Topic = j.Topic,
+                    Tags = tags ?? new List<string>(),
+                    CreatedAt = j.CreatedAt,
+                    ViewCount = j.ViewCount,
+                    PrivacyLevel = j.PrivacyLevel,
+                    IsAnonymous = j.IsAnonymous,
+                    DUI = j.DUI,
+                    ReferencedDUI = j.ReferencedDUI
+                };
+            }).ToList();
+
             return View(model);
         }
 
@@ -245,6 +274,17 @@ namespace InkVault.Controllers
             // Check if they're friends (simplified check)
             if (currentUser != null && currentUser.Id != userId)
             {
+                // Check block status
+                bool isBlockedByMe = await _context.BlockedUsers
+                    .AnyAsync(b => b.BlockerId == currentUser.Id && b.BlockedId == userId);
+                bool hasBlockedMe = await _context.BlockedUsers
+                    .AnyAsync(b => b.BlockerId == userId && b.BlockedId == currentUser.Id);
+
+                if (hasBlockedMe)
+                    return NotFound();
+
+                model.IsBlockedByMe = isBlockedByMe;
+
                 var areFriends = await _context.Friends
                     .Where(f => (f.UserId == currentUser.Id && f.FriendUserId == userId) ||
                                 (f.UserId == userId && f.FriendUserId == currentUser.Id))
@@ -280,6 +320,47 @@ namespace InkVault.Controllers
                 model.PublicJournalCount = publicJournalCount;
             }
 
+            // Load pinned journals with privacy filtering
+            bool viewerIsOwner = currentUser?.Id == userId;
+            var pinnedQuery = _context.Journals
+                .Where(j => j.UserId == userId && j.IsPinned && j.Status == JournalStatus.Published);
+
+            if (!viewerIsOwner)
+            {
+                if (model.AreFriends)
+                    pinnedQuery = pinnedQuery.Where(j => j.PrivacyLevel == Models.PrivacyLevel.Public || j.PrivacyLevel == Models.PrivacyLevel.FriendsOnly);
+                else
+                    pinnedQuery = pinnedQuery.Where(j => j.PrivacyLevel == Models.PrivacyLevel.Public);
+            }
+
+            var pinnedPubRaw = await pinnedQuery
+                .OrderByDescending(j => j.CreatedAt)
+                .Select(j => new { j.JournalId, j.Title, j.Content, j.Abstract, j.Topic, j.Tags, j.CreatedAt, j.ViewCount, j.PrivacyLevel, j.IsAnonymous, j.DUI, j.ReferencedDUI })
+                .ToListAsync();
+
+            model.PinnedJournals = pinnedPubRaw.Select(j =>
+            {
+                var rawText = !string.IsNullOrEmpty(j.Content) ? j.Content : j.Abstract ?? string.Empty;
+                var stripped = System.Text.RegularExpressions.Regex.Replace(rawText, "<[^>]+>", " ").Trim();
+                var preview = stripped.Length > 150 ? stripped.Substring(0, 150) + "..." : stripped;
+                List<string>? tags = null;
+                if (!string.IsNullOrEmpty(j.Tags)) { try { tags = System.Text.Json.JsonSerializer.Deserialize<List<string>>(j.Tags); } catch { } }
+                return new UserJournalViewModel
+                {
+                    JournalId = j.JournalId,
+                    Title = j.Title,
+                    Content = preview,
+                    Topic = j.Topic,
+                    Tags = tags ?? new List<string>(),
+                    CreatedAt = j.CreatedAt,
+                    ViewCount = j.ViewCount,
+                    PrivacyLevel = j.PrivacyLevel,
+                    IsAnonymous = j.IsAnonymous,
+                    DUI = j.DUI,
+                    ReferencedDUI = j.ReferencedDUI
+                };
+            }).ToList();
+
             // Pass navigation context
             ViewBag.FromFriends = fromFriends;
 
@@ -307,6 +388,15 @@ namespace InkVault.Controllers
 
             var currentUser = await _userManager.GetUserAsync(User);
             var currentUserId = currentUser?.Id;
+
+            // Block check: if the journal owner has blocked us, deny access
+            if (currentUser != null && currentUser.Id != userId)
+            {
+                bool hasBlockedMe = await _context.BlockedUsers
+                    .AnyAsync(b => b.BlockerId == userId && b.BlockedId == currentUser.Id);
+                if (hasBlockedMe)
+                    return NotFound();
+            }
 
             // Check if they're friends (needed for privacy filtering)
             bool areFriends = false;
@@ -408,6 +498,135 @@ namespace InkVault.Controllers
             return View(viewModel);
         }
 
+        /// <summary>
+        /// Block a user: removes friendship, pending requests, and creates block record.
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> BlockUser(string userId)
+        {
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser == null)
+                return Unauthorized();
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                TempData["Error"] = "Invalid user.";
+                return RedirectToAction("Index", "Home");
+            }
+
+            if (currentUser.Id == userId)
+            {
+                TempData["Error"] = "You cannot block yourself.";
+                return RedirectToAction("ViewPublic", new { userId });
+            }
+
+            try
+            {
+                var existingBlock = await _context.BlockedUsers
+                    .AnyAsync(b => b.BlockerId == currentUser.Id && b.BlockedId == userId);
+
+                if (!existingBlock)
+                {
+                    // Remove friendship in both directions if it exists
+                    var friends = await _context.Friends
+                        .Where(f => (f.UserId == currentUser.Id && f.FriendUserId == userId) ||
+                                    (f.UserId == userId && f.FriendUserId == currentUser.Id))
+                        .ToListAsync();
+                    _context.Friends.RemoveRange(friends);
+
+                    // Remove any friend requests (pending or accepted) between the two users
+                    var requests = await _context.FriendRequests
+                        .Where(fr => (fr.SenderId == currentUser.Id && fr.ReceiverId == userId) ||
+                                     (fr.SenderId == userId && fr.ReceiverId == currentUser.Id))
+                        .ToListAsync();
+                    _context.FriendRequests.RemoveRange(requests);
+
+                    _context.BlockedUsers.Add(new BlockedUser
+                    {
+                        BlockerId = currentUser.Id,
+                        BlockedId = userId,
+                        CreatedAt = DateTime.UtcNow
+                    });
+
+                    await _context.SaveChangesAsync();
+                }
+
+                TempData["Success"] = "User has been blocked.";
+            }
+            catch (Exception)
+            {
+                TempData["Error"] = "An error occurred while blocking the user. Please try again.";
+            }
+
+            return RedirectToAction("ViewPublic", new { userId });
+        }
+
+        /// <summary>
+        /// Unblock a previously blocked user.
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UnblockUser(string userId)
+        {
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser == null)
+                return Unauthorized();
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                TempData["Error"] = "Invalid user.";
+                return RedirectToAction("Index", "Home");
+            }
+
+            try
+            {
+                var block = await _context.BlockedUsers
+                    .FirstOrDefaultAsync(b => b.BlockerId == currentUser.Id && b.BlockedId == userId);
+
+                if (block != null)
+                {
+                    _context.BlockedUsers.Remove(block);
+                    await _context.SaveChangesAsync();
+                }
+
+                TempData["Success"] = "User has been unblocked.";
+            }
+            catch (Exception)
+            {
+                TempData["Error"] = "An error occurred while unblocking the user. Please try again.";
+            }
+
+            return RedirectToAction("ViewPublic", new { userId });
+        }
+
+        /// <summary>
+        /// View and manage the current user's blocked users list.
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> BlockedUsers()
+        {
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser == null)
+                return Unauthorized();
+
+            var blockedUsers = await _context.BlockedUsers
+                .Where(b => b.BlockerId == currentUser.Id)
+                .Include(b => b.Blocked)
+                .OrderByDescending(b => b.CreatedAt)
+                .Select(b => new BlockedUserViewModel
+                {
+                    BlockedUserId = b.BlockedId,
+                    FirstName = b.Blocked!.FirstName,
+                    LastName = b.Blocked.LastName,
+                    ProfilePicturePath = b.Blocked.ProfilePicturePath,
+                    BlockedAt = b.CreatedAt
+                })
+                .ToListAsync();
+
+            return View(blockedUsers);
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
@@ -448,6 +667,35 @@ namespace InkVault.Controllers
 
             TempData["Error"] = "Failed to delete account";
             return RedirectToAction("Index");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> TogglePin(int journalId)
+        {
+            var userId = _userManager.GetUserId(User);
+            var journal = await _context.Journals
+                .FirstOrDefaultAsync(j => j.JournalId == journalId && j.UserId == userId);
+
+            if (journal == null)
+                return NotFound(new { message = "Journal not found" });
+
+            if (!journal.IsPinned)
+            {
+                var pinnedCount = await _context.Journals
+                    .CountAsync(j => j.UserId == userId && j.IsPinned);
+                if (pinnedCount >= 3)
+                    return BadRequest(new { message = "You can pin at most 3 journals to your profile." });
+            }
+
+            journal.IsPinned = !journal.IsPinned;
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                isPinned = journal.IsPinned,
+                message = journal.IsPinned ? "Journal pinned to your profile!" : "Journal unpinned from your profile."
+            });
         }
     }
 }

@@ -43,6 +43,9 @@ namespace InkVault.ViewModels
         // For public profile
         public bool AreFriends { get; set; }
         public int PublicJournalCount { get; set; } = 0;
+        public bool IsBlockedByMe { get; set; }
+        public bool HasBlockedMe { get; set; }
+        public List<UserJournalViewModel> PinnedJournals { get; set; } = new List<UserJournalViewModel>();
     }
 
     public class ChangePasswordViewModel
@@ -75,6 +78,13 @@ namespace InkVault.ViewModels
         public bool IsAnonymous { get; set; }
         public string? DUI { get; set; }
         public string? ReferencedDUI { get; set; }
+
+        public int ReadingTimeMinutes =>
+            Math.Max(1, (int)Math.Ceiling(
+                System.Text.RegularExpressions.Regex.Replace(Content ?? string.Empty, "<[^>]+>", " ")
+                    .Split(new char[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Length / 200.0
+            ));
     }
 
     public class UserJournalsViewModel
@@ -87,6 +97,15 @@ namespace InkVault.ViewModels
         public bool AreFriends { get; set; }
         public List<UserJournalViewModel> Journals { get; set; } = new List<UserJournalViewModel>();
         public int JournalCount { get; set; }
+    }
+
+    public class BlockedUserViewModel
+    {
+        public string BlockedUserId { get; set; } = null!;
+        public string FirstName { get; set; } = null!;
+        public string LastName { get; set; } = null!;
+        public string? ProfilePicturePath { get; set; }
+        public DateTime BlockedAt { get; set; }
     }
 }
 

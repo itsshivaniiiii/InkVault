@@ -26,6 +26,12 @@ namespace InkVault.Models
         [Display(Name = "Friend Posts New Journal")]
         public bool EmailOnFriendJournalPost { get; set; } = true;
 
+        [Display(Name = "Someone Likes Your Journal")]
+        public bool EmailOnJournalLiked { get; set; } = false;
+
+        [Display(Name = "Someone Comments on Your Journal")]
+        public bool EmailOnJournalCommented { get; set; } = false;
+
         // Security & Login Notifications
         [Display(Name = "Require OTP on Every Login")]
         public bool RequireOTPOnEveryLogin { get; set; } = false;

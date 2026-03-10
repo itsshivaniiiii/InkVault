@@ -100,6 +100,10 @@ namespace InkVault.Controllers
                 }
 
                 ViewData["PublishedJournalsCount"] = publishedJournalsCount;
+
+                // Write streak data
+                ViewData["CurrentStreak"] = user?.CurrentStreak ?? 0;
+                ViewData["LongestStreak"] = user?.LongestStreak ?? 0;
             }
 
             return View();

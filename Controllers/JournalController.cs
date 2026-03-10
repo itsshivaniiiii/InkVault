@@ -141,8 +141,23 @@ namespace InkVault.Controllers
                 if (friendIds.Any())
                 {
                     await _notificationService.SendFriendJournalPostEmailAsync(journal, friendIds);
+                    await _notificationService.NotifyJournalPublishedInAppAsync(journal, friendIds);
                 }
             }
+
+            // If journal references another, notify that journal's owner
+            if (model.Status == JournalStatus.Published && !string.IsNullOrWhiteSpace(journal.ReferencedDUI))
+            {
+                var referencedJournal = await _context.Journals
+                    .FirstOrDefaultAsync(j => j.DUI == journal.ReferencedDUI);
+
+                if (referencedJournal != null)
+                {
+                    await _notificationService.NotifyJournalReferencedAsync(userId!, referencedJournal, journal);
+                }
+            }
+
+            await UpdateWriteStreakAsync(userId!);
 
             TempData["Success"] = model.Status == JournalStatus.Draft 
                 ? "Journal saved as draft!" 
@@ -264,6 +279,8 @@ namespace InkVault.Controllers
                 }
             }
 
+            await UpdateWriteStreakAsync(userId!);
+
             TempData["Success"] = model.Status == JournalStatus.Draft 
                 ? "Journal saved as draft!" 
                 : "Journal updated successfully!";
@@ -277,6 +294,8 @@ namespace InkVault.Controllers
             var userId = _userManager.GetUserId(User);
             var journals = await _context.Journals
                 .Where(j => j.UserId == userId)
+                .Include(j => j.Likes)
+                .Include(j => j.Comments)
                 .OrderByDescending(j => j.CreatedAt)
                 .ToListAsync();
 
@@ -305,6 +324,12 @@ namespace InkVault.Controllers
                         : j.Abstract != null 
                             ? (j.Abstract.Length > 100 ? j.Abstract.Substring(0, 100) + "..." : j.Abstract)
                             : string.Empty,
+                    ReadingTimeMinutes = Math.Max(1, (int)Math.Ceiling(
+                        System.Text.RegularExpressions.Regex.Replace(
+                            !string.IsNullOrEmpty(j.Content) ? j.Content : j.Abstract ?? string.Empty,
+                            "<[^>]+>", " ")
+                        .Split(new char[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+                        .Length / 200.0)),
                     CreatedAt = j.CreatedAt,
                     UpdatedAt = j.UpdatedAt,
                     Status = j.Status,
@@ -313,7 +338,10 @@ namespace InkVault.Controllers
                     Tags = tags,
                     ViewCount = j.ViewCount,
                     DUI = j.DUI,
-                    ReferencedDUI = j.ReferencedDUI
+                    ReferencedDUI = j.ReferencedDUI,
+                    LikeCount = j.Likes.Count,
+                    CommentCount = j.Comments.Count,
+                    IsPinned = j.IsPinned
                 };
             }).ToList();
 
@@ -390,6 +418,51 @@ namespace InkVault.Controllers
             ViewData["CurrentSort"] = sort;
             ViewData["CurrentTopic"] = topic;
 
+            // Reading history for the Library section (most recent 12)
+            var historyRaw = await _context.JournalViews
+                .Where(v => v.UserId == userId && v.Journal.Status == JournalStatus.Published)
+                .Include(v => v.Journal)
+                    .ThenInclude(j => j.User)
+                .OrderByDescending(v => v.ViewedAt)
+                .Take(12)
+                .Select(v => new
+                {
+                    v.JournalId,
+                    v.Journal.Title,
+                    v.Journal.Topic,
+                    v.ViewedAt,
+                    v.Journal.IsAnonymous,
+                    v.Journal.PrivacyLevel,
+                    AuthorFirstName = v.Journal.IsAnonymous ? null : v.Journal.User!.FirstName,
+                    AuthorLastName = v.Journal.IsAnonymous ? null : v.Journal.User!.LastName,
+                    IsOwn = v.Journal.UserId == userId,
+                    Content = v.Journal.Content ?? v.Journal.Abstract ?? string.Empty
+                })
+                .ToListAsync();
+
+            var readingHistory = historyRaw.Select(r => new ReadingHistoryItemViewModel
+            {
+                JournalId = r.JournalId,
+                Title = r.Title,
+                Topic = r.Topic,
+                ViewedAt = r.ViewedAt,
+                IsAnonymous = r.IsAnonymous,
+                PrivacyLevel = r.PrivacyLevel,
+                AuthorName = r.IsOwn
+                    ? "Your Journal"
+                    : r.IsAnonymous
+                        ? null
+                        : $"{r.AuthorFirstName} {r.AuthorLastName}",
+                IsOwn = r.IsOwn,
+                Content = r.Content
+            }).ToList();
+
+            var historyTotal = await _context.JournalViews
+                .CountAsync(v => v.UserId == userId && v.Journal.Status == JournalStatus.Published);
+
+            ViewBag.ReadingHistory = readingHistory;
+            ViewBag.TotalHistoryCount = historyTotal;
+
             return View(savedJournals);
         }
 
@@ -418,6 +491,9 @@ namespace InkVault.Controllers
             var journal = await _context.Journals
                 .Include(j => j.User)
                 .Include(j => j.Views)
+                .Include(j => j.Likes)
+                .Include(j => j.Comments)
+                    .ThenInclude(c => c.User)
                 .FirstOrDefaultAsync(j => j.JournalId == id);
 
             if (journal == null)
@@ -810,6 +886,7 @@ namespace InkVault.Controllers
             if (requester != null && journal.User != null)
             {
                 await _notificationService.SendFullTextRequestEmailAsync(journal, requester);
+                await _notificationService.NotifyFullTextRequestedInAppAsync(journal, requester);
             }
 
             TempData["Success"] = "Your request has been sent to the journal author.";
@@ -830,6 +907,145 @@ namespace InkVault.Controllers
                 .AnyAsync(r => r.JournalId == journalId && r.RequesterId == userId);
 
             return Json(new { hasRequested });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> History()
+        {
+            var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var historyRaw = await _context.JournalViews
+                .Where(v => v.UserId == userId && v.Journal.Status == JournalStatus.Published)
+                .Include(v => v.Journal)
+                    .ThenInclude(j => j.User)
+                .OrderByDescending(v => v.ViewedAt)
+                .Select(v => new
+                {
+                    v.JournalId,
+                    v.Journal.Title,
+                    v.Journal.Topic,
+                    v.ViewedAt,
+                    v.Journal.IsAnonymous,
+                    v.Journal.PrivacyLevel,
+                    AuthorFirstName = v.Journal.IsAnonymous ? null : v.Journal.User!.FirstName,
+                    AuthorLastName = v.Journal.IsAnonymous ? null : v.Journal.User!.LastName,
+                    AuthorUserId = v.Journal.IsAnonymous ? null : v.Journal.UserId,
+                    IsOwn = v.Journal.UserId == userId,
+                    Content = v.Journal.Content ?? v.Journal.Abstract ?? string.Empty
+                })
+                .ToListAsync();
+
+            var history = historyRaw.Select(r => new ReadingHistoryItemViewModel
+            {
+                JournalId = r.JournalId,
+                Title = r.Title,
+                Topic = r.Topic,
+                ViewedAt = r.ViewedAt,
+                IsAnonymous = r.IsAnonymous,
+                PrivacyLevel = r.PrivacyLevel,
+                AuthorName = r.IsOwn
+                    ? "Your Journal"
+                    : r.IsAnonymous
+                        ? null
+                        : $"{r.AuthorFirstName} {r.AuthorLastName}",
+                AuthorUserId = r.IsOwn || r.IsAnonymous ? null : r.AuthorUserId,
+                IsOwn = r.IsOwn,
+                Content = r.Content
+            }).ToList();
+
+            return View(history);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Stats(string sortBy = "views")
+        {
+            var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var statsRaw = await _context.Journals
+                .Where(j => j.UserId == userId)
+                .Select(j => new
+                {
+                    j.JournalId,
+                    j.Title,
+                    j.Topic,
+                    j.CreatedAt,
+                    j.PrivacyLevel,
+                    j.Status,
+                    j.ViewCount,
+                    j.DUI,
+                    LikeCount = j.Likes.Count,
+                    CommentCount = j.Comments.Count,
+                    Content = j.Content ?? j.Abstract ?? string.Empty
+                })
+                .ToListAsync();
+
+            var statViewModels = statsRaw.Select(s => new JournalStatItemViewModel
+            {
+                JournalId = s.JournalId,
+                Title = s.Title,
+                Topic = s.Topic,
+                CreatedAt = s.CreatedAt,
+                PrivacyLevel = s.PrivacyLevel,
+                Status = s.Status,
+                ViewCount = s.ViewCount,
+                DUI = s.DUI,
+                LikeCount = s.LikeCount,
+                CommentCount = s.CommentCount,
+                Content = s.Content
+            }).ToList();
+
+            statViewModels = sortBy switch
+            {
+                "likes" => statViewModels.OrderByDescending(s => s.LikeCount).ToList(),
+                "comments" => statViewModels.OrderByDescending(s => s.CommentCount).ToList(),
+                "date" => statViewModels.OrderByDescending(s => s.CreatedAt).ToList(),
+                _ => statViewModels.OrderByDescending(s => s.ViewCount).ToList()
+            };
+
+            ViewBag.TotalViews = statViewModels.Sum(s => s.ViewCount);
+            ViewBag.TotalLikes = statViewModels.Sum(s => s.LikeCount);
+            ViewBag.TotalComments = statViewModels.Sum(s => s.CommentCount);
+            ViewBag.TotalJournals = statViewModels.Count;
+            ViewBag.PublishedCount = statViewModels.Count(s => s.Status == JournalStatus.Published);
+            ViewBag.DraftCount = statViewModels.Count(s => s.Status == JournalStatus.Draft);
+            ViewBag.SortBy = sortBy;
+
+            return View(statViewModels);
+        }
+
+        private async Task UpdateWriteStreakAsync(string userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) return;
+
+            var todayUtc = DateTime.UtcNow.Date;
+
+            if (user.LastWriteDate.HasValue)
+            {
+                var lastDate = user.LastWriteDate.Value.Date;
+
+                if (lastDate == todayUtc)
+                    return; // Already wrote today
+
+                user.CurrentStreak = lastDate == todayUtc.AddDays(-1)
+                    ? user.CurrentStreak + 1  // Consecutive day
+                    : 1;                       // Missed day(s) — reset
+            }
+            else
+            {
+                user.CurrentStreak = 1;
+            }
+
+            user.LastWriteDate = todayUtc;
+
+            if (user.CurrentStreak > user.LongestStreak)
+                user.LongestStreak = user.CurrentStreak;
+
+            await _userManager.UpdateAsync(user);
         }
     }
 

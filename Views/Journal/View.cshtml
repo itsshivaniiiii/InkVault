@@ -132,6 +132,208 @@
         border-top-color: rgba(102, 126, 234, 0.15);
     }
 
+    /* Interactions Section */
+    .journal-interactions {
+        margin-top: 40px;
+        padding-top: 30px;
+        border-top: 2px solid rgba(102, 126, 234, 0.2);
+    }
+
+    .interaction-buttons {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 30px;
+    }
+
+    .interaction-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 20px;
+        background: rgba(102, 126, 234, 0.15);
+        border: 1px solid rgba(102, 126, 234, 0.3);
+        border-radius: 8px;
+        color: #667eea;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        font-size: 1rem;
+    }
+
+    .interaction-btn:hover {
+        background: rgba(102, 126, 234, 0.3);
+        border-color: #667eea;
+        transform: translateY(-2px);
+    }
+
+    .interaction-btn.liked {
+        background: rgba(255, 107, 107, 0.2);
+        border-color: #ff6b6b;
+        color: #ff6b6b;
+    }
+
+    .interaction-btn.liked:hover {
+        background: rgba(255, 107, 107, 0.3);
+    }
+
+    .interaction-btn.saved {
+        background: rgba(255, 193, 7, 0.2);
+        border-color: #ffc107;
+        color: #ffc107;
+    }
+
+    .interaction-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none !important;
+    }
+
+    .comments-section { margin-top: 30px; }
+
+    .comments-title {
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin-bottom: 20px;
+        color: var(--text-primary);
+    }
+
+    .comment-input-area { margin-bottom: 30px; }
+
+    .comment-textarea {
+        width: 100%;
+        padding: 15px;
+        background: rgba(102, 126, 234, 0.1);
+        border: 1px solid rgba(102, 126, 234, 0.3);
+        border-radius: 8px;
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 1rem;
+        resize: vertical;
+        min-height: 80px;
+        transition: all 0.3s ease;
+    }
+
+    .comment-textarea:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .comment-submit-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+        justify-content: flex-end;
+    }
+
+    .btn-post-comment {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        transition: all 0.3s ease;
+    }
+
+    .btn-post-comment:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-cancel-comment {
+        padding: 10px 20px;
+        border: 1px solid rgba(102, 126, 234, 0.3);
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        background: rgba(102, 126, 234, 0.2);
+        color: #667eea;
+        transition: all 0.3s ease;
+    }
+
+    .btn-cancel-comment:hover { background: rgba(102, 126, 234, 0.3); }
+
+    .comment-item {
+        background: rgba(102, 126, 234, 0.08);
+        border: 1px solid rgba(102, 126, 234, 0.15);
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+    }
+
+    .comment-item:hover {
+        border-color: rgba(102, 126, 234, 0.3);
+        background: rgba(102, 126, 234, 0.12);
+    }
+
+    .comment-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .comment-author { font-weight: 600; color: var(--text-primary); }
+
+    .comment-meta { display: flex; gap: 15px; align-items: center; }
+
+    .comment-time { font-size: 0.85rem; color: var(--text-secondary); }
+
+    .comment-delete {
+        background: rgba(255, 107, 107, 0.2);
+        border: none;
+        color: #ff6b6b;
+        padding: 6px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .comment-delete:hover { background: rgba(255, 107, 107, 0.3); }
+
+    .comment-content { color: var(--text-primary); line-height: 1.6; }
+
+    .no-comments {
+        text-align: center;
+        padding: 30px;
+        color: var(--text-secondary);
+        font-style: italic;
+    }
+
+    [data-theme="light"] .comment-item {
+        background: rgba(102, 126, 234, 0.05);
+        border-color: rgba(102, 126, 234, 0.1);
+    }
+
+    [data-theme="light"] .comment-textarea {
+        background: rgba(102, 126, 234, 0.05);
+        color: var(--text-primary);
+    }
+
+    /* Toast */
+    .toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        pointer-events: none;
+    }
+
+    @@keyframes slideInRight {
+        from { transform: translateX(400px); opacity: 0; }
+        to   { transform: translateX(0);     opacity: 1; }
+    }
+
+    @@keyframes progressBar {
+        from { width: 100%; }
+        to   { width: 0%;   }
+    }
+
     .journal-actions {
         display: flex;
         gap: 15px;
@@ -326,6 +528,65 @@
         </div>
     }
 
+    <!-- Interactions Section -->
+    <div class="journal-interactions">
+        <div class="interaction-buttons">
+            <button class="interaction-btn" id="likeBtn" onclick="toggleLike(@Model!.JournalId)">
+                <i class="bi bi-heart"></i> <span id="likeBtnText">Like</span> <span id="likeCount">(@(Model.Likes?.Count ?? 0))</span>
+            </button>
+            <button class="interaction-btn" onclick="toggleCommentInput()">
+                <i class="bi bi-chat-dots"></i> Comment <span>(@(Model.Comments?.Count ?? 0))</span>
+            </button>
+            @{
+                var viewerUserId = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            }
+            @if (Model?.UserId != viewerUserId)
+            {
+                <button class="interaction-btn" id="saveBtn" onclick="toggleSaveJournal(@Model!.JournalId)">
+                    <i class="bi bi-bookmark"></i> <span id="saveBtnText">Save</span>
+                </button>
+            }
+        </div>
+
+        <div class="comments-section">
+            <h3 class="comments-title"><i class="bi bi-chat-dots"></i> Comments</h3>
+
+            <div class="comment-input-area" id="commentInputArea" style="display:none;">
+                <textarea class="comment-textarea" id="commentText" placeholder="Share your thoughts..."></textarea>
+                <div class="comment-submit-actions">
+                    <button class="btn-post-comment" onclick="submitComment(@Model!.JournalId)">Post Comment</button>
+                    <button class="btn-cancel-comment" onclick="toggleCommentInput()">Cancel</button>
+                </div>
+            </div>
+
+            <div id="commentsList">
+                @if (Model?.Comments != null && Model.Comments.Any())
+                {
+                    @foreach (var comment in Model.Comments.OrderByDescending(c => c.CreatedAt))
+                    {
+                        <div class="comment-item" id="comment-@comment.Id">
+                            <div class="comment-header">
+                                <div class="comment-author">@comment.User?.FirstName @comment.User?.LastName</div>
+                                <div class="comment-meta">
+                                    <span class="comment-time"><time datetime="@comment.CreatedAt.ToString("o")"></time></span>
+                                    @if (User.Identity?.Name == comment.User?.UserName || Model.UserId == viewerUserId)
+                                    {
+                                        <button class="comment-delete" onclick="deleteComment(@comment.Id)">Delete</button>
+                                    }
+                                </div>
+                            </div>
+                            <div class="comment-content">@comment.Content</div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="no-comments">No comments yet. Be the first to comment!</div>
+                }
+            </div>
+        </div>
+    </div>
+
     <!-- Actions -->
     <div class="journal-actions">
         @{
@@ -394,3 +655,208 @@
         }
     </div>
 </div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+@Html.AntiForgeryToken()
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        initializeLikeState();
+        initializeSaveState();
+        // Convert all <time> elements to local date
+        document.querySelectorAll('time[datetime]').forEach(function (el) {
+            var utc = new Date(el.getAttribute('datetime'));
+            if (!isNaN(utc)) el.textContent = utc.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+        });
+    });
+
+    const journalId = @Model!.JournalId;
+
+    function initializeLikeState() {
+        fetch(`/api/interaction/likes/${journalId}`)
+            .then(r => r.json())
+            .then(data => {
+                const btn = document.getElementById('likeBtn');
+                const txt = document.getElementById('likeBtnText');
+                if (!btn || !txt) return;
+                if (data.userLiked) {
+                    btn.classList.add('liked');
+                    txt.textContent = 'Unlike';
+                } else {
+                    btn.classList.remove('liked');
+                    txt.textContent = 'Like';
+                }
+            })
+            .catch(() => {});
+    }
+
+    function initializeSaveState() {
+        const saveBtn = document.getElementById('saveBtn');
+        if (!saveBtn) return;
+        fetch(`/api/SavedJournal/check/${journalId}`)
+            .then(r => r.json())
+            .then(data => {
+                const txt = document.getElementById('saveBtnText');
+                if (data.isSaved) {
+                    saveBtn.classList.add('saved');
+                    if (txt) txt.textContent = 'Saved';
+                } else {
+                    saveBtn.classList.remove('saved');
+                    if (txt) txt.textContent = 'Save';
+                }
+            })
+            .catch(() => {});
+    }
+
+    function toggleLike(id) {
+        fetch(`/api/interaction/like/${id}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+            }
+        })
+        .then(r => r.json())
+        .then(data => {
+            const btn = document.getElementById('likeBtn');
+            const txt = document.getElementById('likeBtnText');
+            const count = document.getElementById('likeCount');
+            if (data.liked) {
+                btn.classList.add('liked');
+                txt.textContent = 'Unlike';
+                showToast('Liked this journal!', 'success');
+            } else {
+                btn.classList.remove('liked');
+                txt.textContent = 'Like';
+                showToast('Unliked this journal', 'info');
+            }
+            count.textContent = `(${data.likeCount})`;
+        })
+        .catch(() => showToast('Failed to update like', 'error'));
+    }
+
+    function toggleSaveJournal(id) {
+        const saveBtn = document.getElementById('saveBtn');
+        const saveBtnText = document.getElementById('saveBtnText');
+        if (!saveBtn) { showToast('You cannot save your own journal!', 'warning'); return; }
+
+        const isSaved = saveBtn.classList.contains('saved');
+        const url = isSaved ? `/api/SavedJournal/unsave/${id}` : `/api/SavedJournal/save/${id}`;
+        saveBtn.disabled = true;
+        saveBtnText.textContent = isSaved ? 'Removing...' : 'Saving...';
+
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+        fetch(url, {
+            method: isSaved ? 'DELETE' : 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': token || ''
+            }
+        })
+        .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(() => {
+            if (isSaved) {
+                saveBtn.classList.remove('saved');
+                saveBtnText.textContent = 'Save';
+                showToast('Removed from your library', 'warning');
+            } else {
+                saveBtn.classList.add('saved');
+                saveBtnText.textContent = 'Saved';
+                showToast('Saved to your library!', 'success');
+            }
+        })
+        .catch(() => {
+            saveBtnText.textContent = isSaved ? 'Saved' : 'Save';
+            showToast('Failed to update save', 'error');
+        })
+        .finally(() => { saveBtn.disabled = false; });
+    }
+
+    function toggleCommentInput() {
+        const area = document.getElementById('commentInputArea');
+        area.style.display = area.style.display === 'none' ? 'block' : 'none';
+        if (area.style.display === 'block') document.getElementById('commentText').focus();
+    }
+
+    function submitComment(id) {
+        const text = document.getElementById('commentText').value.trim();
+        if (!text) { showToast('Please enter a comment', 'error'); return; }
+
+        fetch('/api/interaction/comment', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+            },
+            body: JSON.stringify({ journalId: id, content: text })
+        })
+        .then(r => r.json())
+        .then(data => {
+            const list = document.getElementById('commentsList');
+            const noComments = list.querySelector('.no-comments');
+            if (noComments) noComments.remove();
+
+            const el = document.createElement('div');
+            el.className = 'comment-item';
+            el.id = `comment-${data.id}`;
+            el.innerHTML = `
+                <div class="comment-header">
+                    <div class="comment-author">${data.authorName}</div>
+                    <div class="comment-meta">
+                        <span class="comment-time"><time datetime="${data.createdAt}"></time></span>
+                        <button class="comment-delete" onclick="deleteComment(${data.id})">Delete</button>
+                    </div>
+                </div>
+                <div class="comment-content">${data.content}</div>`;
+
+            list.insertBefore(el, list.firstChild);
+            el.querySelectorAll('time[datetime]').forEach(function (t) {
+                var utc = new Date(t.getAttribute('datetime'));
+                if (!isNaN(utc)) t.textContent = utc.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+            });
+
+            document.getElementById('commentText').value = '';
+            document.getElementById('commentInputArea').style.display = 'none';
+            showToast('Comment posted!', 'success');
+        })
+        .catch(() => showToast('Failed to post comment', 'error'));
+    }
+
+    function deleteComment(commentId) {
+        if (!confirm('Delete this comment?')) return;
+        fetch(`/api/interaction/comment/${commentId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+            }
+        })
+        .then(r => r.json())
+        .then(() => {
+            const el = document.getElementById(`comment-${commentId}`);
+            if (el) el.remove();
+            showToast('Comment deleted', 'success');
+        })
+        .catch(() => showToast('Failed to delete comment', 'error'));
+    }
+
+    function showToast(message, type = 'info') {
+        const container = document.getElementById('toastContainer');
+        const id = 'toast-' + Date.now();
+        const colors = {
+            success: 'linear-gradient(135deg,#10b981 0%,#059669 100%)',
+            error:   'linear-gradient(135deg,#ef4444 0%,#dc2626 100%)',
+            warning: 'linear-gradient(135deg,#f59e0b 0%,#d97706 100%)',
+            info:    'linear-gradient(135deg,#3b82f6 0%,#2563eb 100%)'
+        };
+        const icons = { success:'bi-check-circle', error:'bi-exclamation-circle', warning:'bi-exclamation-triangle', info:'bi-info-circle' };
+        const toast = document.createElement('div');
+        toast.id = id;
+        toast.style.cssText = `background:${colors[type]||colors.info};color:white;padding:16px 24px;border-radius:8px;margin-bottom:12px;box-shadow:0 10px 30px rgba(0,0,0,.2);animation:slideInRight .4s ease;display:flex;align-items:center;gap:12px;font-weight:600;max-width:400px;min-width:300px;pointer-events:auto;position:relative;overflow:hidden;`;
+        toast.innerHTML = `<i class="bi ${icons[type]||icons.info}" style="font-size:1.2rem;flex-shrink:0;"></i><span style="flex:1;">${message}</span><button onclick="document.getElementById('${id}')?.remove()" style="background:none;border:none;color:white;font-size:1.4rem;cursor:pointer;padding:0;opacity:.7;">×</button><div style="position:absolute;bottom:0;left:0;height:4px;background:rgba(255,255,255,.3);width:100%;animation:progressBar 4s linear;"></div>`;
+        container.appendChild(toast);
+        setTimeout(() => { toast.style.animation = 'slideInRight .3s ease reverse'; setTimeout(() => toast.remove(), 300); }, 4000);
+    }
+</script>

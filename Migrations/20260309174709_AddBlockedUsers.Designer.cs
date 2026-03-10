@@ -3,6 +3,7 @@ using System;
 using InkVault.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace InkVault.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260309174709_AddBlockedUsers")]
+    partial class AddBlockedUsers
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,54 +24,6 @@ namespace InkVault.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("InkVault.Models.AppNotification", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ActorId")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsRead")
-                        .HasColumnType("boolean");
-
-                    b.Property<int?>("JournalId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("JournalTitle")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("RecipientId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("ResourceUrl")
-                        .HasColumnType("text");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ActorId");
-
-                    b.HasIndex("RecipientId");
-
-                    b.ToTable("AppNotifications");
-                });
 
             modelBuilder.Entity("InkVault.Models.ApplicationUser", b =>
                 {
@@ -87,9 +42,6 @@ namespace InkVault.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("CurrentStreak")
-                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("DateOfBirth")
                         .HasColumnType("timestamp with time zone");
@@ -125,17 +77,11 @@ namespace InkVault.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<DateTime?>("LastWriteDate")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean");
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("LongestStreak")
-                        .HasColumnType("integer");
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
@@ -382,9 +328,6 @@ namespace InkVault.Migrations
                     b.Property<bool>("IsAnonymous")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("IsPinned")
-                        .HasColumnType("boolean");
-
                     b.Property<int>("PrivacyLevel")
                         .HasColumnType("integer");
 
@@ -499,12 +442,6 @@ namespace InkVault.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<bool>("EmailOnFriendRequestReceived")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("EmailOnJournalCommented")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("EmailOnJournalLiked")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("EmailOnSuccessfulLogin")
@@ -704,24 +641,6 @@ namespace InkVault.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
-                });
-
-            modelBuilder.Entity("InkVault.Models.AppNotification", b =>
-                {
-                    b.HasOne("InkVault.Models.ApplicationUser", "Actor")
-                        .WithMany()
-                        .HasForeignKey("ActorId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.HasOne("InkVault.Models.ApplicationUser", "Recipient")
-                        .WithMany("AppNotifications")
-                        .HasForeignKey("RecipientId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Actor");
-
-                    b.Navigation("Recipient");
                 });
 
             modelBuilder.Entity("InkVault.Models.BlockedUser", b =>
@@ -951,8 +870,6 @@ namespace InkVault.Migrations
 
             modelBuilder.Entity("InkVault.Models.ApplicationUser", b =>
                 {
-                    b.Navigation("AppNotifications");
-
                     b.Navigation("BlockedByUsers");
 
                     b.Navigation("BlockedUsers");

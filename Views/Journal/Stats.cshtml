@@ -1,0 +1,544 @@
+@model IEnumerable<InkVault.ViewModels.JournalStatItemViewModel>
+
+@{
+    ViewData["Title"] = "My Journal Statistics";
+    var sortBy = ViewBag.SortBy as string ?? "views";
+    var totalViews    = (int)(ViewBag.TotalViews ?? 0);
+    var totalLikes    = (int)(ViewBag.TotalLikes ?? 0);
+    var totalComments = (int)(ViewBag.TotalComments ?? 0);
+    var totalJournals = (int)(ViewBag.TotalJournals ?? 0);
+    var publishedCount = (int)(ViewBag.PublishedCount ?? 0);
+    var draftCount     = (int)(ViewBag.DraftCount ?? 0);
+    var items = Model.ToList();
+}
+
+<style>
+    .stats-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 40px 20px;
+        animation: fadeInUp 0.8s ease;
+    }
+
+    .back-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        background: rgba(102, 126, 234, 0.2);
+        color: #667eea;
+        border: 1px solid rgba(102, 126, 234, 0.3);
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        margin-bottom: 30px;
+    }
+
+    .back-btn:hover {
+        background: rgba(102, 126, 234, 0.3);
+        color: #667eea;
+        text-decoration: none;
+    }
+
+    .page-header {
+        margin-bottom: 35px;
+    }
+
+    .page-header h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0 0 6px 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .page-header p {
+        color: var(--text-secondary);
+        margin: 0;
+    }
+
+    /* Summary cards row */
+    .summary-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 16px;
+        margin-bottom: 35px;
+    }
+
+    .summary-card {
+        background: linear-gradient(135deg, rgba(26, 31, 46, 0.8) 0%, rgba(26, 31, 46, 0.6) 100%);
+        border: 1px solid rgba(102, 126, 234, 0.2);
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        transition: transform 0.3s ease;
+    }
+
+    .summary-card:hover {
+        transform: translateY(-4px);
+    }
+
+    .summary-card .summary-value {
+        font-size: 2rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1;
+        margin-bottom: 6px;
+    }
+
+    .summary-card .summary-label {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        font-weight: 600;
+    }
+
+    .summary-card .summary-icon {
+        font-size: 1.4rem;
+        margin-bottom: 8px;
+        display: block;
+    }
+
+    /* Sort bar */
+    .sort-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 28px;
+        flex-wrap: wrap;
+    }
+
+    .sort-bar span {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+
+    .sort-btn {
+        padding: 7px 16px;
+        border-radius: 20px;
+        text-decoration: none;
+        font-size: 0.85rem;
+        font-weight: 600;
+        transition: all 0.25s ease;
+        border: 1px solid rgba(102, 126, 234, 0.3);
+        color: var(--text-secondary);
+        background: transparent;
+    }
+
+    .sort-btn:hover {
+        background: rgba(102, 126, 234, 0.15);
+        color: #667eea;
+        text-decoration: none;
+    }
+
+    .sort-btn.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-color: transparent;
+    }
+
+    .sort-btn.active:hover {
+        color: white;
+    }
+
+    /* Stat cards grid */
+    .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        gap: 22px;
+    }
+
+    .stat-card {
+        background: linear-gradient(135deg, rgba(26, 31, 46, 0.8) 0%, rgba(26, 31, 46, 0.6) 100%);
+        border: 1px solid rgba(102, 126, 234, 0.2);
+        border-radius: 12px;
+        padding: 22px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .stat-card:hover {
+        transform: translateY(-6px);
+        border-color: rgba(102, 126, 234, 0.5);
+        box-shadow: 0 18px 36px rgba(102, 126, 234, 0.18);
+    }
+
+    .stat-card-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0;
+        line-height: 1.4;
+    }
+
+    .stat-card-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .badge-status-published {
+        background: rgba(102, 200, 100, 0.2);
+        color: #66c864;
+        padding: 3px 9px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .badge-status-draft {
+        background: rgba(255, 107, 107, 0.15);
+        color: #ff6b6b;
+        padding: 3px 9px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .privacy-badge {
+        padding: 3px 9px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .privacy-public  { background: rgba(240, 147, 251, 0.15); color: #f093fb; }
+    .privacy-friendsonly { background: rgba(102, 126, 234, 0.15); color: #667eea; }
+    .privacy-private { background: rgba(102, 126, 234, 0.15); color: #667eea; }
+
+    .topic-badge {
+        background: rgba(102, 126, 234, 0.15);
+        color: #667eea;
+        padding: 3px 9px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    /* Stat numbers row */
+    .stat-numbers {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    .stat-number {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.95rem;
+        color: var(--text-secondary);
+        font-weight: 600;
+    }
+
+    .stat-number .num {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .stat-number.views  .num { color: #667eea; }
+    .stat-number.likes  .num { color: #ff6b6b; }
+    .stat-number.comments .num { color: #51cf66; }
+
+    .stat-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.82rem;
+        color: var(--text-secondary);
+        flex-wrap: wrap;
+    }
+
+    /* Action buttons */
+    .stat-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: auto;
+        flex-wrap: wrap;
+    }
+
+    .btn-view {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 0.85rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .btn-view:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 14px rgba(102, 126, 234, 0.4);
+        color: white;
+        text-decoration: none;
+    }
+
+    .btn-edit {
+        background: rgba(102, 126, 234, 0.2);
+        color: #667eea;
+        border: 1px solid rgba(102, 126, 234, 0.3);
+        padding: 8px 16px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 0.85rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .btn-edit:hover {
+        background: rgba(102, 126, 234, 0.3);
+        color: #667eea;
+        text-decoration: none;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 80px 40px;
+        background: rgba(102, 126, 234, 0.05);
+        border: 1px dashed rgba(102, 126, 234, 0.2);
+        border-radius: 12px;
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        color: var(--text-secondary);
+        opacity: 0.4;
+        margin-bottom: 20px;
+        display: block;
+    }
+
+    .empty-state h3 { color: var(--text-primary); font-size: 1.5rem; margin-bottom: 10px; }
+    .empty-state p  { color: var(--text-secondary); margin-bottom: 25px; }
+
+    .create-journal-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .create-journal-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        color: white;
+        text-decoration: none;
+    }
+
+    [data-theme="light"] .stat-card,
+    [data-theme="light"] .summary-card {
+        background: #ffffff;
+        border-color: rgba(102, 126, 234, 0.15);
+    }
+
+    @@keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @@media (max-width: 768px) {
+        .stat-grid   { grid-template-columns: 1fr; }
+        .summary-row { grid-template-columns: repeat(2, 1fr); }
+        .page-header h1 { font-size: 1.5rem; }
+    }
+</style>
+
+<div class="stats-container">
+    <a href="@Url.Action("MyJournals", "Journal")" class="back-btn">
+        <i class="bi bi-arrow-left"></i> Back to My Journals
+    </a>
+
+    <div class="page-header">
+        <h1><i class="bi bi-bar-chart-line"></i> My Journal Statistics</h1>
+        <p>Performance overview for all your journals</p>
+    </div>
+
+    <!-- Summary Row -->
+    <div class="summary-row">
+        <div class="summary-card">
+            <span class="summary-icon" style="color: #667eea;"><i class="bi bi-journal-richtext"></i></span>
+            <div class="summary-value">@totalJournals</div>
+            <div class="summary-label">Total Journals</div>
+        </div>
+        <div class="summary-card">
+            <span class="summary-icon" style="color: #66c864;"><i class="bi bi-globe"></i></span>
+            <div class="summary-value">@publishedCount</div>
+            <div class="summary-label">Published</div>
+        </div>
+        <div class="summary-card">
+            <span class="summary-icon" style="color: #667eea;"><i class="bi bi-eye"></i></span>
+            <div class="summary-value">@totalViews</div>
+            <div class="summary-label">Total Views</div>
+        </div>
+        <div class="summary-card">
+            <span class="summary-icon" style="color: #ff6b6b;"><i class="bi bi-heart-fill"></i></span>
+            <div class="summary-value">@totalLikes</div>
+            <div class="summary-label">Total Likes</div>
+        </div>
+        <div class="summary-card">
+            <span class="summary-icon" style="color: #51cf66;"><i class="bi bi-chat-dots-fill"></i></span>
+            <div class="summary-value">@totalComments</div>
+            <div class="summary-label">Total Comments</div>
+        </div>
+    </div>
+
+    @if (items.Any())
+    {
+        <!-- Sort Bar -->
+        <div class="sort-bar">
+            <span>Sort by:</span>
+            <a href="@Url.Action("Stats", "Journal", new { sortBy = "views" })"
+               class="sort-btn @(sortBy == "views" ? "active" : "")">
+                <i class="bi bi-eye"></i> Most Viewed
+            </a>
+            <a href="@Url.Action("Stats", "Journal", new { sortBy = "likes" })"
+               class="sort-btn @(sortBy == "likes" ? "active" : "")">
+                <i class="bi bi-heart"></i> Most Liked
+            </a>
+            <a href="@Url.Action("Stats", "Journal", new { sortBy = "comments" })"
+               class="sort-btn @(sortBy == "comments" ? "active" : "")">
+                <i class="bi bi-chat-dots"></i> Most Commented
+            </a>
+            <a href="@Url.Action("Stats", "Journal", new { sortBy = "date" })"
+               class="sort-btn @(sortBy == "date" ? "active" : "")">
+                <i class="bi bi-calendar"></i> Newest First
+            </a>
+        </div>
+
+        <!-- Per-Journal Stat Cards -->
+        <div class="stat-grid">
+            @foreach (var stat in items)
+            {
+                <div class="stat-card">
+                    <h3 class="stat-card-title">@stat.Title</h3>
+
+                    <div class="stat-card-badges">
+                        @if (stat.Status == InkVault.Models.JournalStatus.Published)
+                        {
+                            <span class="badge-status-published">
+                                <i class="bi bi-check-circle-fill"></i> Published
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge-status-draft">
+                                <i class="bi bi-bookmark"></i> Draft
+                            </span>
+                        }
+
+                        <span class="privacy-badge privacy-@stat.PrivacyLevel.ToString().ToLower()">
+                            @if (stat.PrivacyLevel == InkVault.Models.PrivacyLevel.Public)
+                            {
+                                <i class="bi bi-globe"></i><span>Public</span>
+                            }
+                            else if (stat.PrivacyLevel == InkVault.Models.PrivacyLevel.FriendsOnly)
+                            {
+                                <i class="bi bi-people-fill"></i><span>Friends</span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-lock-fill"></i><span>Private</span>
+                            }
+                        </span>
+
+                        @if (!string.IsNullOrEmpty(stat.Topic))
+                        {
+                            <span class="topic-badge">#@stat.Topic</span>
+                        }
+                    </div>
+
+                    <!-- Stat Numbers -->
+                    <div class="stat-numbers">
+                        <div class="stat-number views">
+                            <i class="bi bi-eye"></i>
+                            <span class="num">@stat.ViewCount</span>
+                            <span>view@(stat.ViewCount != 1 ? "s" : "")</span>
+                        </div>
+                        <div class="stat-number likes">
+                            <i class="bi bi-heart-fill"></i>
+                            <span class="num">@stat.LikeCount</span>
+                            <span>like@(stat.LikeCount != 1 ? "s" : "")</span>
+                        </div>
+                        <div class="stat-number comments">
+                            <i class="bi bi-chat-dots-fill"></i>
+                            <span class="num">@stat.CommentCount</span>
+                            <span>comment@(stat.CommentCount != 1 ? "s" : "")</span>
+                        </div>
+                    </div>
+
+                    <!-- Meta row -->
+                    <div class="stat-meta">
+                        <span>
+                            <i class="bi bi-clock"></i> @stat.ReadingTimeMinutes min read
+                        </span>
+                        <span>·</span>
+                        <span>
+                            <i class="bi bi-calendar-event"></i>
+                            <time datetime="@stat.CreatedAt.ToString("o")"></time>
+                        </span>
+                        @if (!string.IsNullOrEmpty(stat.DUI))
+                        {
+                            <span>·</span>
+                            <span style="font-family: 'Courier New', monospace; font-size: 0.78rem;">@stat.DUI</span>
+                        }
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="stat-actions">
+                        <a href="@Url.Action("View", "Journal", new { id = stat.JournalId })" class="btn-view">
+                            <i class="bi bi-eye"></i> View
+                        </a>
+                        <a href="@Url.Action("Edit", "Journal", new { id = stat.JournalId })" class="btn-edit">
+                            <i class="bi bi-pencil"></i> Edit
+                        </a>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            <i class="bi bi-bar-chart-line"></i>
+            <h3>No Journals Yet</h3>
+            <p>Create your first journal to start tracking statistics.</p>
+            <a href="@Url.Action("Create", "Journal")" class="create-journal-btn">
+                <i class="bi bi-plus-circle"></i> Create a Journal
+            </a>
+        </div>
+    }
+</div>

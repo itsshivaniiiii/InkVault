@@ -588,6 +588,9 @@
                                 <div class="journal-stat">
                                     <i class="bi bi-eye"></i> @journal.ViewCount @(journal.ViewCount == 1 ? "view" : "views")
                                 </div>
+                                <div class="journal-stat">
+                                    <i class="bi bi-clock"></i> @journal.ReadingTimeMinutes min read
+                                </div>
                             </div>
                             <a href="@Url.Action("View", "Explore", new { id = journal.JournalId })" class="view-button">View</a>
                         </div>

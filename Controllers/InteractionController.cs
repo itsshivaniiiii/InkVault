@@ -1,5 +1,6 @@
 using InkVault.Data;
 using InkVault.Models;
+using InkVault.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -15,11 +16,16 @@ namespace InkVault.Controllers
     {
         private readonly InkVault.Data.ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly NotificationService _notificationService;
 
-        public InteractionController(InkVault.Data.ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+        public InteractionController(
+            InkVault.Data.ApplicationDbContext context,
+            UserManager<ApplicationUser> userManager,
+            NotificationService notificationService)
         {
             _context = context;
             _userManager = userManager;
+            _notificationService = notificationService;
         }
 
         [HttpPost("like/{journalId}")]
@@ -40,6 +46,7 @@ namespace InkVault.Controllers
             {
                 _context.Likes.Remove(existingLike);
                 await _context.SaveChangesAsync();
+                await _notificationService.NotifyUnlikeAsync(userId!, journal);
                 return Ok(new { liked = false, likeCount = await _context.Likes.CountAsync(l => l.JournalId == journalId) });
             }
 
@@ -51,6 +58,8 @@ namespace InkVault.Controllers
 
             _context.Likes.Add(like);
             await _context.SaveChangesAsync();
+            await _notificationService.NotifyLikeAsync(userId!, journal);
+            await _notificationService.SendJournalLikedEmailAsync(userId!, journal);
 
             var likeCount = await _context.Likes.CountAsync(l => l.JournalId == journalId);
             return Ok(new { liked = true, likeCount = likeCount, journalTitle = journal.Title, authorName = $"{journal.User?.FirstName} {journal.User?.LastName}" });
@@ -65,7 +74,7 @@ namespace InkVault.Controllers
             }
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var user = await _userManager.FindByIdAsync(userId);
+            var user = await _userManager.FindByIdAsync(userId!);
             var journal = await _context.Journals.FirstOrDefaultAsync(j => j.JournalId == model.JournalId);
 
             if (journal == null)
@@ -80,12 +89,14 @@ namespace InkVault.Controllers
 
             _context.Comments.Add(comment);
             await _context.SaveChangesAsync();
+            await _notificationService.NotifyCommentAsync(userId!, journal, model.Content);
+            await _notificationService.SendJournalCommentedEmailAsync(userId!, journal, model.Content);
 
             return Ok(new
             {
                 id = comment.Id,
                 content = comment.Content,
-                author = user.UserName,
+                author = user!.UserName,
                 authorName = $"{user.FirstName} {user.LastName}",
                 createdAt = comment.CreatedAt.ToString("MMM dd, yyyy"),
                 userId = userId,
@@ -111,10 +122,12 @@ namespace InkVault.Controllers
                 return Forbid();
             }
 
+            var journal = comment.Journal!;
             _context.Comments.Remove(comment);
             await _context.SaveChangesAsync();
+            await _notificationService.NotifyCommentDeletedAsync(userId!, journal);
 
-            return Ok(new { message = "Comment deleted successfully", journalTitle = comment.Journal?.Title });
+            return Ok(new { message = "Comment deleted successfully", journalTitle = journal.Title });
         }
 
         [HttpGet("likes/{journalId}")]
@@ -135,6 +148,6 @@ namespace InkVault.Controllers
     public class CommentViewModel
     {
         public int JournalId { get; set; }
-        public string Content { get; set; }
+        public string Content { get; set; } = null!;
     }
 }

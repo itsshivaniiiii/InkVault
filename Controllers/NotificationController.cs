@@ -53,6 +53,8 @@ namespace InkVault.Controllers
                 EmailOnFriendRequestAccepted = preferences.EmailOnFriendRequestAccepted,
                 EmailOnFriendRequestDenied = preferences.EmailOnFriendRequestDenied,
                 EmailOnFriendJournalPost = preferences.EmailOnFriendJournalPost,
+                EmailOnJournalLiked = preferences.EmailOnJournalLiked,
+                EmailOnJournalCommented = preferences.EmailOnJournalCommented,
                 RequireOTPOnEveryLogin = preferences.RequireOTPOnEveryLogin,
                 EmailOnSuccessfulLogin = preferences.EmailOnSuccessfulLogin
             };
@@ -104,6 +106,8 @@ namespace InkVault.Controllers
                 preferences.EmailOnFriendRequestAccepted = model.EmailOnFriendRequestAccepted;
                 preferences.EmailOnFriendRequestDenied = model.EmailOnFriendRequestDenied;
                 preferences.EmailOnFriendJournalPost = model.EmailOnFriendJournalPost;
+                preferences.EmailOnJournalLiked = model.EmailOnJournalLiked;
+                preferences.EmailOnJournalCommented = model.EmailOnJournalCommented;
                 preferences.RequireOTPOnEveryLogin = model.RequireOTPOnEveryLogin;
                 preferences.EmailOnSuccessfulLogin = model.EmailOnSuccessfulLogin;
                 preferences.UpdatedAt = DateTime.UtcNow;
@@ -140,6 +144,89 @@ namespace InkVault.Controllers
                 TempData["Error"] = $"Error: {ex.Message}";
                 return RedirectToAction("Settings");
             }
+        }
+
+        // ── In-app notification inbox ─────────────────────────────────────
+
+        [HttpGet]
+        public async Task<IActionResult> Inbox()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Unauthorized();
+
+            var notifications = await _context.AppNotifications
+                .Where(n => n.RecipientId == user.Id)
+                .Include(n => n.Actor)
+                .OrderByDescending(n => n.CreatedAt)
+                .Take(100)
+                .Select(n => new NotificationItemViewModel
+                {
+                    Id                  = n.Id,
+                    Type                = n.Type,
+                    Message             = n.Message,
+                    ResourceUrl         = n.ResourceUrl,
+                    ActorId             = n.ActorId,
+                    ActorName           = n.Actor != null ? $"{n.Actor.FirstName} {n.Actor.LastName}" : null,
+                    ActorProfilePicture = n.Actor != null ? n.Actor.ProfilePicturePath : null,
+                    JournalId           = n.JournalId,
+                    JournalTitle        = n.JournalTitle,
+                    IsRead              = n.IsRead,
+                    CreatedAt           = n.CreatedAt
+                })
+                .ToListAsync();
+
+            var viewModel = new NotificationInboxViewModel
+            {
+                AllNotifications = notifications,
+                UnreadCount      = notifications.Count(n => !n.IsRead)
+            };
+
+            return View(viewModel);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> MarkAsRead(int id)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Unauthorized();
+
+            var notification = await _context.AppNotifications
+                .FirstOrDefaultAsync(n => n.Id == id && n.RecipientId == user.Id);
+
+            if (notification == null) return NotFound();
+
+            notification.IsRead = true;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { success = true });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> MarkAllAsRead()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Unauthorized();
+
+            await _context.AppNotifications
+                .Where(n => n.RecipientId == user.Id && !n.IsRead)
+                .ExecuteUpdateAsync(s => s.SetProperty(x => x.IsRead, true));
+
+            TempData["Success"] = "All notifications marked as read.";
+            return RedirectToAction("Inbox");
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetUnreadCount()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Json(new { count = 0 });
+
+            var count = await _context.AppNotifications
+                .CountAsync(n => n.RecipientId == user.Id && !n.IsRead);
+
+            return Json(new { count });
         }
     }
 }

@@ -203,6 +203,47 @@
         text-decoration: none;
     }
 
+    /* Block button styles */
+    .block-btn {
+        background: rgba(244, 67, 54, 0.15);
+        color: #f44336;
+        padding: 10px 20px;
+        border: 1px solid rgba(244, 67, 54, 0.3);
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.9rem;
+    }
+
+    .block-btn:hover {
+        background: rgba(244, 67, 54, 0.25);
+        color: #f44336;
+    }
+
+    .unblock-btn {
+        background: rgba(102, 126, 234, 0.15);
+        color: #667eea;
+        padding: 10px 20px;
+        border: 1px solid rgba(102, 126, 234, 0.3);
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.9rem;
+    }
+
+    .unblock-btn:hover {
+        background: rgba(102, 126, 234, 0.25);
+        color: #667eea;
+    }
+
     .no-journals {
         text-align: center;
         padding: 40px 20px;
@@ -214,6 +255,77 @@
         opacity: 0.5;
         display: block;
         margin-bottom: 15px;
+    }
+
+    .pinned-section {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+        border: 1px solid rgba(102, 126, 234, 0.2);
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 25px;
+    }
+
+    .pinned-section-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin-bottom: 18px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid rgba(102, 126, 234, 0.2);
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .pinned-pub-card {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(102, 126, 234, 0.15);
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 14px;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: block;
+        color: inherit;
+    }
+
+    .pinned-pub-card:hover {
+        border-color: rgba(102, 126, 234, 0.4);
+        background: rgba(102, 126, 234, 0.08);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.12);
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .pinned-pub-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 6px;
+    }
+
+    .pinned-pub-preview {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        line-height: 1.5;
+        margin-bottom: 10px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .pinned-pub-footer {
+        display: flex;
+        gap: 15px;
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+    }
+
+    [data-theme="light"] .pinned-pub-card {
+        background: #ffffff;
+        border-color: rgba(102, 126, 234, 0.1);
     }
 </style>
 
@@ -272,24 +384,77 @@
     <!-- Action Buttons (if viewing another user) -->
     @{
         var currentUser = await UserManager.GetUserAsync(User);
-        if (currentUser?.Id != Model?.UserId)
+        if (currentUser != null && currentUser.Id != Model?.UserId)
         {
-            <div style="text-align: center; margin-bottom: 30px;">
-                @if (Model?.AreFriends ?? false)
+            <div style="text-align: center; margin-bottom: 30px; display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+                @if (Model?.IsBlockedByMe ?? false)
                 {
-                    <button class="action-button" disabled>
-                        <i class="bi bi-check-circle"></i> Already Friends
-                    </button>
+                    <form id="unblockUserForm" method="post" asp-action="UnblockUser" asp-controller="Profile"
+                          style="display:inline;"
+                          data-user-name="@Model?.FirstName @Model?.LastName">
+                        <input type="hidden" name="userId" value="@Model?.UserId" />
+                        @Html.AntiForgeryToken()
+                        <button type="button" class="unblock-btn" onclick="confirmUnblock()">
+                            <i class="bi bi-slash-circle"></i> Unblock User
+                        </button>
+                    </form>
                 }
                 else
                 {
-                    @Html.AntiForgeryToken()
-                    <button type="button" class="action-button" id="addFriendBtn" onclick="sendFriendRequestFromProfile('@Model?.UserId', '@Model?.FirstName @Model?.LastName')">
-                        <i class="bi bi-person-plus"></i> Add Friend
-                    </button>
+                    @if (Model?.AreFriends ?? false)
+                    {
+                        <button class="action-button" disabled>
+                            <i class="bi bi-check-circle"></i> Already Friends
+                        </button>
+                    }
+                    else
+                    {
+                        @Html.AntiForgeryToken()
+                        <button type="button" class="action-button" id="addFriendBtn"
+                            onclick="sendFriendRequestFromProfile('@Model?.UserId', '@Model?.FirstName @Model?.LastName')">
+                            <i class="bi bi-person-plus"></i> Add Friend
+                        </button>
+                    }
+                    <form id="blockUserForm" method="post" asp-action="BlockUser" asp-controller="Profile"
+                          style="display:inline;"
+                          data-user-name="@Model?.FirstName @Model?.LastName">
+                        <input type="hidden" name="userId" value="@Model?.UserId" />
+                        @Html.AntiForgeryToken()
+                        <button type="button" class="block-btn" onclick="confirmBlock()">
+                            <i class="bi bi-ban"></i> Block
+                        </button>
+                    </form>
                 }
             </div>
         }
+    }
+
+    <!-- Pinned Journals Section -->
+    @if (Model?.PinnedJournals != null && Model.PinnedJournals.Any())
+    {
+        <div class="pinned-section">
+            <div class="pinned-section-title">
+                <i class="bi bi-pin-fill" style="color: #667eea;"></i> Pinned Journals
+            </div>
+            @foreach (var journal in Model.PinnedJournals)
+            {
+                <a href="@Url.Action("View", "Journal", new { id = journal.JournalId, fromUserProfile = true, userProfileId = Model.UserId })" class="pinned-pub-card">
+                    <div class="pinned-pub-title">@journal.Title</div>
+                    @if (!string.IsNullOrEmpty(journal.Content))
+                    {
+                        <div class="pinned-pub-preview">@journal.Content</div>
+                    }
+                    <div class="pinned-pub-footer">
+                        @if (!string.IsNullOrEmpty(journal.Topic))
+                        {
+                            <span><i class="bi bi-tag"></i> @journal.Topic</span>
+                        }
+                        <span><i class="bi bi-eye"></i> @journal.ViewCount</span>
+                        <span><time datetime="@journal.CreatedAt.ToString("o")"></time></span>
+                    </div>
+                </a>
+            }
+        </div>
     }
 
     <!-- Public Journals Section -->
@@ -346,6 +511,33 @@
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
     <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('time[datetime]').forEach(function (el) {
+                var utc = new Date(el.getAttribute('datetime'));
+                if (!isNaN(utc)) el.textContent = utc.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+            });
+        });
+
+        function confirmBlock() {
+            var form = document.getElementById('blockUserForm');
+            var userName = form ? form.getAttribute('data-user-name') : '';
+            showConfirm(
+                'Block ' + userName + '? They will be removed from your friends and won\'t be able to see your profile.',
+                function() { document.getElementById('blockUserForm').submit(); },
+                { title: 'Block User', confirmText: 'Block', danger: true }
+            );
+        }
+
+        function confirmUnblock() {
+            var form = document.getElementById('unblockUserForm');
+            var userName = form ? form.getAttribute('data-user-name') : '';
+            showConfirm(
+                'Unblock ' + userName + '? They will be able to view your profile again.',
+                function() { document.getElementById('unblockUserForm').submit(); },
+                { title: 'Unblock User', confirmText: 'Unblock' }
+            );
+        }
+
         function sendFriendRequestFromProfile(receiverId, userName) {
             showConfirm('Send friend request to ' + userName + '?', function() {
                 var btn = document.getElementById('addFriendBtn');

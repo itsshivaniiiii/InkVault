@@ -18,6 +18,12 @@ namespace InkVault.ViewModels
         [Display(Name = "Friend Posts New Journal")]
         public bool EmailOnFriendJournalPost { get; set; }
 
+        [Display(Name = "Someone Likes Your Journal")]
+        public bool EmailOnJournalLiked { get; set; }
+
+        [Display(Name = "Someone Comments on Your Journal")]
+        public bool EmailOnJournalCommented { get; set; }
+
         [Display(Name = "Require OTP on Every Login")]
         public bool RequireOTPOnEveryLogin { get; set; }
 

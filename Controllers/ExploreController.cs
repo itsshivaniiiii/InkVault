@@ -38,6 +38,15 @@ namespace InkVault.Controllers
                 .Select(f => f.FriendUserId)
                 .ToListAsync();
 
+            // Exclude journals from blocked users (users I've blocked)
+            var blockedUserIds = await _context.BlockedUsers
+                .Where(b => b.BlockerId == currentUser.Id)
+                .Select(b => b.BlockedId)
+                .ToListAsync();
+
+            if (blockedUserIds.Count > 0)
+                query = query.Where(j => !blockedUserIds.Contains(j.UserId));
+
             // Filter by search query
             if (!string.IsNullOrWhiteSpace(search))
             {

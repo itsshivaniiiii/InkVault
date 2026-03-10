@@ -33,6 +33,16 @@ namespace InkVault.Controllers
                 .Select(f => f.FriendUserId)
                 .ToListAsync();
 
+            // Exclude blocked users from the feed
+            var blockedUserIds = await _context.BlockedUsers
+                .Where(b => b.BlockerId == currentUser.Id)
+                .Select(b => b.BlockedId)
+                .ToListAsync();
+
+            var visibleFriendIds = blockedUserIds.Count > 0
+                ? friendIds.Where(id => !blockedUserIds.Contains(id)).ToList()
+                : friendIds;
+
             if (!friendIds.Any())
             {
                 // No friends yet
@@ -45,20 +55,20 @@ namespace InkVault.Controllers
                 return View(emptyViewModel);
             }
 
-            // Get public journals from friends
+            // Get public journals from friends (excluding blocked users)
             var publicJournals = await _context.Journals
                 .Where(j => j.Status == JournalStatus.Published &&
                            j.PrivacyLevel == PrivacyLevel.Public &&
-                           friendIds.Contains(j.UserId))
+                           visibleFriendIds.Contains(j.UserId))
                 .Include(j => j.User)
                 .OrderByDescending(j => j.CreatedAt)
                 .ToListAsync();
 
-            // Get friends-only journals from friends
+            // Get friends-only journals from friends (excluding blocked users)
             var friendsOnlyJournals = await _context.Journals
                 .Where(j => j.Status == JournalStatus.Published &&
                            j.PrivacyLevel == PrivacyLevel.FriendsOnly &&
-                           friendIds.Contains(j.UserId))
+                           visibleFriendIds.Contains(j.UserId))
                 .Include(j => j.User)
                 .OrderByDescending(j => j.CreatedAt)
                 .ToListAsync();
