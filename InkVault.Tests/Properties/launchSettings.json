@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "InkVault.Tests": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:54487;http://localhost:54488"
+    }
+  }
+}

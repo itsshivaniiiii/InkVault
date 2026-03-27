@@ -8,6 +8,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="InkVault.Tests\**" />
+    <EmbeddedResource Remove="InkVault.Tests\**" />
+    <None Remove="InkVault.Tests\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include=".github\copilot-instructions.md" />
   </ItemGroup>
 

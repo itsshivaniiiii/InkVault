@@ -19,14 +19,19 @@ var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL");
 
 if (!string.IsNullOrEmpty(connectionString))
 {
-    // Convert postgres:// URI format to Npgsql format if needed
-    if (connectionString.StartsWith("postgres://") || connectionString.StartsWith("postgresql://"))
+    // It might be a URI (e.g., postgres://user:pass@host:port/db) or a raw Npgsql string.
+    // Try to parse as a URI. A valid DB URI will have a scheme and user info.
+    if (Uri.TryCreate(connectionString, UriKind.Absolute, out var uri) && !string.IsNullOrEmpty(uri.UserInfo))
     {
-        var uri = new Uri(connectionString);
         var userInfo = uri.UserInfo.Split(':');
         connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={(userInfo.Length > 1 ? userInfo[1] : "")};";
+        Console.WriteLine("[STARTUP] Using DATABASE_URL (parsed as URI) from environment");
     }
-    Console.WriteLine("[STARTUP] Using DATABASE_URL from environment");
+    else
+    {
+        // Assume it's already a valid Npgsql connection string
+        Console.WriteLine("[STARTUP] Using DATABASE_URL (raw) from environment");
+    }
 }
 else
 {
@@ -202,3 +207,5 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
+
+public partial class Program { }
