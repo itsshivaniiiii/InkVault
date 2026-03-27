@@ -24,7 +24,18 @@ if (!string.IsNullOrEmpty(connectionString))
     if (Uri.TryCreate(connectionString, UriKind.Absolute, out var uri) && !string.IsNullOrEmpty(uri.UserInfo))
     {
         var userInfo = uri.UserInfo.Split(':');
-        connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={(userInfo.Length > 1 ? userInfo[1] : "")};";
+        var host = uri.Host;
+        var port = uri.Port;
+
+        // Handle cases where the host part of the URI includes a protocol, e.g., from Aiven/Render.
+        // The Npgsql driver expects a clean hostname for DNS resolution.
+        if (host.Contains("://"))
+        {
+            // Example: tcp://pg-d65e37a-cmr-c7af.h.aivencloud.com
+            host = host.Substring(host.IndexOf("://") + 3);
+        }
+
+        connectionString = $"Host={host};Port={port};Database={uri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={(userInfo.Length > 1 ? userInfo[1] : "")};";
         Console.WriteLine("[STARTUP] Using DATABASE_URL (parsed as URI) from environment");
     }
     else
