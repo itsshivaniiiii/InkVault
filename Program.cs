@@ -29,10 +29,10 @@ if (!string.IsNullOrEmpty(connectionString))
 
         // Handle cases where the host part of the URI includes a protocol, e.g., from Aiven/Render.
         // The Npgsql driver expects a clean hostname for DNS resolution.
-        if (host.Contains("://"))
+        var hostParts = host.Split(new[] { "://" }, StringSplitOptions.RemoveEmptyEntries);
+        if (hostParts.Length > 1)
         {
-            // Example: tcp://pg-d65e37a-cmr-c7af.h.aivencloud.com
-            host = host.Substring(host.IndexOf("://") + 3);
+            host = hostParts[1]; // Get the part after "tcp://" or other protocols
         }
 
         connectionString = $"Host={host};Port={port};Database={uri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={(userInfo.Length > 1 ? userInfo[1] : "")};";
